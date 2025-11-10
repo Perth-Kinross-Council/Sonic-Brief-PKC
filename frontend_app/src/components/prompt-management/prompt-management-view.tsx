@@ -1,17 +1,10 @@
-import type {
-  CategoryResponse,
-  SubcategoryResponse,
-} from "@/api/prompt-management";
 import { useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  getPromptManagementCategoriesQuery,
-  getPromptManagementSubcategoriesQuery,
-} from "@/queries/prompt-management.query";
+import { useFetchCategories, useFetchSubcategories } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import MDPreview from "@uiw/react-markdown-preview";
 import {
@@ -25,6 +18,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// Map API response to component types
+import type { CategoryResponse, SubcategoryResponse } from "@/lib/api";
+
 import { AddSubcategoryDialog } from "./add-subcategory-dialog";
 import { DeleteCategoryDialog } from "./delete-category-dialog";
 import { DeleteSubcategoryDialog } from "./delete-subcategory-dialog";
@@ -32,18 +28,30 @@ import { EditCategoryDialog } from "./edit-category-dialog";
 import { EditSubcategoryDialog } from "./edit-subcategory-dialog";
 
 export function PromptManagementView() {
-  const [selectedCategory, setSelectedCategory] =
-    useState<CategoryResponse | null>(null);
-  const [selectedSubcategory, setSelectedSubcategory] =
-    useState<SubcategoryResponse | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryResponse | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<SubcategoryResponse | null>(null);
 
-  const { data: categories, isLoading: isCategoriesPending } = useQuery(
-    getPromptManagementCategoriesQuery(),
-  );
+  // Use the hooks from api.ts
+  const fetchCategories = useFetchCategories();
+  const fetchSubcategories = useFetchSubcategories();
 
-  const { data: subcategories, isLoading: isSubcategoriesPending } = useQuery(
-    getPromptManagementSubcategoriesQuery(),
-  );
+  const { data: categories, isLoading: isCategoriesPending } = useQuery({
+    queryKey: ["sonic-brief", "prompt-management", "categories"],
+    queryFn: async () => {
+      const apiCategories = await fetchCategories();
+      // Return API response as-is since types now match
+      return apiCategories;
+    },
+  });
+
+  useEffect(() => {
+    /* silent on categories load */
+  }, [categories]);
+
+  const { data: subcategories, isLoading: isSubcategoriesPending } = useQuery({
+    queryKey: ["sonic-brief", "prompt-management", "subcategories"],
+    queryFn: () => fetchSubcategories(),
+  });
 
   const [expandedCategories, setExpandedCategories] = useState<Array<string>>(
     [],
@@ -89,13 +97,24 @@ export function PromptManagementView() {
   };
 
   const handleCategoryClick = (category: CategoryResponse) => {
-    setSelectedCategory(category);
-    setSelectedSubcategory(null);
-
-    // Get the actual category ID with fallback
     const categoryId = category.id || "";
-    if (!expandedCategories.includes(categoryId)) {
+    const isExpanded = expandedCategories.includes(categoryId);
+
+    if (isExpanded) {
+      // Collapse: toggle off and clear selection if it was the active category
       toggleCategory(categoryId);
+      if (selectedCategory?.id === categoryId) {
+        setSelectedCategory(null);
+        // Clear any subcategory selection that belongs to this category
+        if (selectedSubcategory && selectedSubcategory.category_id === categoryId) {
+          setSelectedSubcategory(null);
+        }
+      }
+    } else {
+      // Expand: toggle on and set as active
+      toggleCategory(categoryId);
+      setSelectedCategory(category);
+      setSelectedSubcategory(null);
     }
   };
 
@@ -128,6 +147,13 @@ export function PromptManagementView() {
       <div className="grid-cols-[1fr_2fr] gap-3 lg:grid">
         {isCategoriesPending || isSubcategoriesPending ? (
           <CategoryListSkeleton />
+        ) : !categories || categories.length === 0 ? (
+          <Alert>
+            <AlertTitle>No Categories</AlertTitle>
+            <AlertDescription>
+              No categories found. Please add a category to get started.
+            </AlertDescription>
+          </Alert>
         ) : (
           <Card>
             <CardContent className="min-h-[calc(100vh-200px)] p-4">
@@ -224,13 +250,9 @@ export function PromptManagementView() {
                         variant="ghost"
                         className="w-full justify-start p-2"
                         onClick={() => {
-                          const normalizedCategory = {
-                            ...category,
-                            category_id: category.id,
-                          };
-                          setSelectedCategory(normalizedCategory);
-                          setIsAddSubcategoryOpen(true);
-                        }}
+                        setSelectedCategory(category); // Removed commented debug logs
+                        setIsAddSubcategoryOpen(true);
+                      }}
                       >
                         <Plus className="mr-2 h-4 w-4" />
                         Add Subcategory
@@ -277,7 +299,7 @@ export function PromptManagementView() {
                             {key}
                           </div>
                           <div className="p-4">
-                            <MDPreview source={value} />
+                            <MDPreview source={typeof value === "string" ? value : ""} />
                           </div>
                         </CardContent>
                       </Card>
@@ -311,16 +333,9 @@ export function PromptManagementView() {
                       Edit Category
                     </Button>
                     <Button
-                      onClick={() => {
-                        if (selectedCategory) {
-                          const normalizedCategory = {
-                            ...selectedCategory,
-                            category_id: selectedCategory.id,
-                          };
-                          setSelectedCategory(normalizedCategory);
-                        }
-                        setIsAddSubcategoryOpen(true);
-                      }}
+                    onClick={() => {
+                      setIsAddSubcategoryOpen(true); // Removed commented debug logs
+                    }}
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Subcategory

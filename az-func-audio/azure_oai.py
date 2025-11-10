@@ -1,6 +1,6 @@
 import os
 from openai import AzureOpenAI
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from azure.identity import ManagedIdentityCredential, get_bearer_token_provider
 from dotenv import load_dotenv
 import re
 import logging
@@ -11,7 +11,14 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-token_provider = get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")    
+# Use ManagedIdentityCredential for Azure Functions
+client_id = os.getenv("AZURE_CLIENT_ID")
+if client_id:
+    credential = ManagedIdentityCredential(client_id=client_id)
+else:
+    credential = ManagedIdentityCredential()
+
+token_provider = get_bearer_token_provider(credential, "https://cognitiveservices.azure.com/.default")    
 
 AZURE_OPENAI_ENDPOINT=os.getenv("AZURE_OPENAI_ENDPOINT")
 if not AZURE_OPENAI_ENDPOINT:

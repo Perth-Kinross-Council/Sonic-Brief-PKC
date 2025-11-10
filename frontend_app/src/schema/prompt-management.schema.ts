@@ -39,3 +39,24 @@ export const editCategoryFormSchema = z.object({
 });
 
 export type EditCategoryFormValues = z.infer<typeof editCategoryFormSchema>;
+
+export const transcriptUploadSchema = z.object({
+  caseId: z
+    .string({ required_error: "Case ID is required." })
+    .min(2, { message: "Case ID must be at least 2 characters." }),
+  transcriptFile: z
+    .instanceof(File, { message: "Please select a transcript file." })
+    .refine((file) => file && file.size > 0, {
+      message: "Please select a valid transcript file.",
+    }),
+  promptCategory: z.string({
+    required_error: "Please select a Service Area.",
+    invalid_type_error: "Please select a Service Area.",
+  }).min(1, { message: "Please select a Service Area." }),
+  promptSubcategory: z.string({
+    required_error: "Please select a Service Function / Meeting.",
+    invalid_type_error: "Please select a Service Function / Meeting.",
+  }).min(1, { message: "Please select a Service Function / Meeting." }),
+});
+
+export type TranscriptUploadValues = z.infer<typeof transcriptUploadSchema>;

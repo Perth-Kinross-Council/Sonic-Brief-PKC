@@ -1,10 +1,10 @@
-import type { CategoryResponse } from "@/api/prompt-management";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { CategoryResponse } from "@/lib/api";
 
 import { SubcategoryForm } from "./subcategory-form";
 
@@ -21,8 +21,10 @@ export function AddSubcategoryDialog({
   categories,
   selectedCategoryId,
 }: AddSubcategoryDialogProps) {
+  // diagnostics removed
+
   // Ensure selectedCategoryId is not null before rendering the form
-  if (!isOpen || selectedCategoryId === null) {
+  if (!isOpen) {
     return null;
   }
 
@@ -32,13 +34,16 @@ export function AddSubcategoryDialog({
         <DialogHeader>
           <DialogTitle>Add New Subcategory</DialogTitle>
         </DialogHeader>
-        {/* Render the form only when the dialog is open and a category is selected */}
-        <SubcategoryForm
-          key={`add-subcategory-form-${selectedCategoryId}`} // Use selectedCategoryId in key
-          categories={categories}
-          selectedCategoryId={selectedCategoryId}
-          closeDialog={() => onOpenChange(false)}
-        />
+        {selectedCategoryId ? (
+          <SubcategoryForm
+            key={`add-subcategory-form-${selectedCategoryId}`} // Use selectedCategoryId in key
+            categories={categories}
+            selectedCategoryId={selectedCategoryId}
+            closeDialog={() => onOpenChange(false)}
+          />
+        ) : (
+          <div>No category selected. Please select a category first.</div>
+        )}
       </DialogContent>
     </Dialog>
   );

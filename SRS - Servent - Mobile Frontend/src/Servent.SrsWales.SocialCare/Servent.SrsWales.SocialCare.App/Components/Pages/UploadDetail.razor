@@ -1,0 +1,503 @@
+﻿@page "/uploads/{RecordingId:guid}"
+@using Servent.SrsWales.SocialCare.App.Data
+@using Servent.SrsWales.SocialCare.App.Data.Forms
+@using Servent.SrsWales.SocialCare.App.Helpers
+@using Servent.SrsWales.SocialCare.App.Services
+@using Servent.SrsWales.SocialCare.App.Services.SonicBrief
+@using Servent.SrsWales.SocialCare.App.Services.SonicBrief.Models
+@using Markdig;
+
+@inject StorageService StorageService
+@inject NavigationManager NavigationManager
+@inject DialogService DialogService
+@inject SonicBriefService SonicBriefService
+@inject UserService AuthService
+@inject IAudioPlayerService AudioPlayerService
+@inject MsalAuthenticationService AuthenticationStateProvider
+@inject NotificationService NotificationService
+
+<ConnectivityCheckHeader />
+
+<div class="flex flex-col gap-5 p-5">
+
+	<div class="flex justify-between gap-2 items-center">
+		<div class="text-lg font-medium">
+			Case: @(IsLoading ? "Loading..." : Recording?.CaseId)
+		</div>
+		<RadzenButton Click="Close" Icon="close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Dark" class="!rounded-full" />
+	</div>
+
+	<div class="h-px px-5 bg-gray-200 w-full"></div>
+
+	@if (IsLoading)
+	{
+		<div class="flex justify-center items-center mt-12">
+			<RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Dark" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+		</div>
+	}
+	else
+	{
+		// if recording has been uploaded, then only display the details and controls
+		if (Recording is not null && Recording.Status != Status.Pending && Recording.Status != Status.Failed)
+		{
+			<div class="flex flex-col gap-3">
+				<div>
+					<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Case ID</RadzenText>
+					<RadzenText>@Recording.CaseId</RadzenText>
+				</div>
+
+				<div>
+					<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Service Area</RadzenText>
+					<RadzenText>@Recording.Category?.Name</RadzenText>
+				</div>
+
+				@if (Form.Category != null && FilteredSubCategories.Count > 0)
+				{
+					<div>
+						<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Service Function / Meeting</RadzenText>
+						<RadzenText>@Recording.SubCategory?.Name</RadzenText>
+					</div>
+				}
+
+				<div>
+					<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Status</RadzenText>
+
+					@switch (Recording?.Status)
+					{
+						case Status.Pending:
+							<RadzenBadge BadgeStyle="BadgeStyle.Secondary" Text="Pending" />
+							break;
+
+						case Status.Uploaded:
+							<RadzenBadge BadgeStyle="BadgeStyle.Info" Text="Uploaded" />
+							break;
+
+						case Status.Processing:
+							<RadzenBadge BadgeStyle="BadgeStyle.Info" Text="Processing" />
+							break;
+
+						case Status.Completed:
+							<RadzenBadge BadgeStyle="BadgeStyle.Success" Text="Complete" />
+							break;
+
+						case Status.Failed:
+							<RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="Failed" />
+							break;
+					}
+				</div>
+			</div>
+		}
+		else
+		{
+			// if recording has not been uploaded, then display the upload form
+			<EditForm EditContext="EditContext">
+				<DataAnnotationsValidator />
+
+				<div class="flex flex-col gap-3">
+					<div>
+						<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Case ID</RadzenText>
+						<RadzenTextBox @bind-Value="Form.CaseId" class="w-full" Disabled="Recording?.Status != Status.Pending && Recording?.Status != Status.Failed" />
+						<ValidationMessage For="() => Form.CaseId" class="text-sm text-red-600 mt-1" />
+					</div>
+
+					<div>
+						<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Service Area</RadzenText>
+
+						@if (IsLoading)
+						{
+							<RadzenTextBox Placeholder="Loading..." class="w-full" Disabled="true" />
+						}
+						else
+						{
+							<RadzenDropDown TValue="Category" @bind-Value="Form.Category" Data="AllCategories" Change="@(value => OnChangeCategory(value))" class="w-full" Disabled="Recording?.Status != Status.Pending && Recording?.Status != Status.Failed" />
+						}
+						<ValidationMessage For="() => Form.Category" class="text-sm text-red-600 mt-1" />
+					</div>
+
+					@if (Form.Category != null && FilteredSubCategories.Count > 0)
+					{
+						<div>
+							<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Service Function / Meeting</RadzenText>
+							<RadzenDropDown TValue="Subcategory" @bind-Value="Form.SubCategory" Change="@(value => OnChangeSubCategory(value))" Data="FilteredSubCategories" class="w-full" Disabled="Recording?.Status != Status.Pending && Recording?.Status != Status.Failed" />
+							<ValidationMessage For="() => Form.SubCategory" class="text-sm text-red-600 mt-1" />
+						</div>
+					}
+
+					<div>
+						<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Status</RadzenText>
+
+						@switch (Recording?.Status)
+						{
+							case Status.Pending:
+								<RadzenBadge BadgeStyle="BadgeStyle.Secondary" Text="Pending" />
+								break;
+
+							case Status.Uploaded:
+								<RadzenBadge BadgeStyle="BadgeStyle.Info" Text="Uploaded" />
+								break;
+
+							case Status.Processing:
+								<RadzenBadge BadgeStyle="BadgeStyle.Info" Text="Processing" />
+								break;
+
+							case Status.Completed:
+								<RadzenBadge BadgeStyle="BadgeStyle.Success" Text="Complete" />
+								break;
+
+							case Status.Failed:
+								<RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="Failed" />
+								break;
+						}
+					</div>
+				</div>
+			</EditForm>
+		}
+
+		<div class="h-px px-5 bg-gray-200 w-full"></div>
+
+		@if (IsLoggedIn)
+		{
+			<div>
+				@if (!string.IsNullOrWhiteSpace(Recording?.RecordingPath) && File.Exists(Recording?.RecordingPath))
+				{
+					<div class="flex flex-col gap-3">
+						<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Recording</RadzenText>
+
+						<div class="flex flex-col w-full gap-1">
+							<div class="flex gap-5 w-full items-center justify-between">
+								@if (AudioPlayerService.IsPlaying)
+								{
+									<div class="audio-player-controls">
+										<RadzenButton Click="PauseAudio" Icon="pause" ButtonStyle="ButtonStyle.Light" class="!rounded-full !h-10 !w-10" />
+									</div>
+								}
+								else
+								{
+									<div class="audio-player-controls">
+										<RadzenButton Click="@PlayAudio" Icon="play_arrow" ButtonStyle="ButtonStyle.Primary" class="!rounded-full !h-10 !w-10" />
+									</div>
+								}
+
+								<RadzenSlider Value=@AudioPlayerService.CurrentPosition Change="@(position => SeekAudio(position))" Min="0" Max="@((decimal)AudioPlayerService.Duration)" TValue="double" class="w-full" />
+							</div>
+
+							<div class="text-xs text-gray-500 flex gap-2 justify-between w-full">
+								<div>@PlaybackProgress</div>
+								<div>@PlaybackDuration</div>
+							</div>
+						</div>
+					</div>
+				}
+				else if (!File.Exists(Recording?.RecordingPath))
+				{
+					<div class="text-center text-gray-500 text-sm">The audio recording could not be found on the device.</div>
+				}
+				else
+				{
+					<div class="text-center text-gray-500 text-sm">No audio recording available.</div>
+				}
+			</div>
+		}
+		else
+		{
+			<div class="flex text-sm justify-between items-center gap-3">
+				<div class="text-gray-500">You must be logged in to listen to the recording.</div>
+
+				<div>
+					<RadzenButton Click=@Login Text="Login" ButtonStyle="ButtonStyle.Primary" class="!rounded-full" />
+				</div>
+			</div>
+
+		}
+
+		<div class="h-px px-5 bg-gray-200 w-full"></div>
+
+		<div class="flex flex-col gap-2">
+			@if (Recording?.Status == Status.Pending || Recording?.Status == Status.Failed)
+			{
+				<RadzenButton Click="Upload" Text="Upload" Icon="cloud_upload" ButtonStyle="ButtonStyle.Primary" class="w-full" Disabled="@(!CanUpload || IsUploading)" />
+			}
+
+			@if (Recording?.Status == Status.Pending || Recording?.Status == Status.Failed)
+			{
+				<RadzenButton Click="Delete" Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger" class="w-full" />
+			}
+
+			@if (IsLoggedIn)
+			{
+				@if (!string.IsNullOrWhiteSpace(Recording?.AnalysisText))
+				{
+					<RadzenButton Click="ViewAnalysis" Text="View analysis" Icon="cognition" ButtonStyle="ButtonStyle.Primary" class="w-full" />
+				}
+
+				@if (!string.IsNullOrWhiteSpace(Recording?.TranscriptionPath))
+				{
+					<RadzenButton Click="ViewTranscription" Text="View transcription" Icon="transcribe" ButtonStyle="ButtonStyle.Primary" class="w-full" Disabled="NetworkAccess != NetworkAccess.Internet" />
+				}
+			}
+		</div>
+	}
+</div>
+
+@code {
+	[Parameter]
+	public Guid RecordingId { get; set; }
+
+	private NetworkAccess NetworkAccess { get; set; }
+	private bool IsLoading { get; set; } = false;
+	private bool IsUploading { get; set; } = false;
+	private bool CanUpload { get; set; } = false;
+	private bool IsLoggedIn { get; set; } = false;
+
+	private Recording? Recording { get; set; } = null;
+	private EditRecordForm Form { get; set; } = new EditRecordForm();
+	[CascadingParameter] private EditContext EditContext { get; set; }
+
+	private List<Category> AllCategories { get; set; } = [];
+	private List<Subcategory> AllSubCategories { get; set; } = [];
+	private List<Subcategory> FilteredSubCategories { get; set; } = [];
+
+	private string PlaybackProgress => TimeSpan.FromSeconds(AudioPlayerService.CurrentPosition).ToString(@"hh\:mm\:ss");
+	private string PlaybackDuration => TimeSpan.FromSeconds(AudioPlayerService.Duration).ToString(@"hh\:mm\:ss");
+
+	protected override async Task OnInitializedAsync()
+	{
+		NetworkAccess = Connectivity.NetworkAccess;
+		Connectivity.ConnectivityChanged += (object? sender, ConnectivityChangedEventArgs e) =>
+		{
+			NetworkAccess = e.NetworkAccess;
+			StateHasChanged();
+		};
+
+		EditContext = new EditContext(Form);
+		EditContext.OnFieldChanged += async (sender, eventArgs) => await EditContext_OnFieldChanged(sender!, eventArgs);
+
+		AudioPlayerService.PropertyChanged += OnPropertyChanged;
+
+		await GetInitialData();
+
+		await base.OnInitializedAsync();
+	}
+
+	private async Task EditContext_OnFieldChanged(object sender, FieldChangedEventArgs e)
+	{
+		// update recording on storage based on updated form values
+		Recording.CaseId = Form.CaseId;
+		Recording.Category = Form.Category;
+		Recording.SubCategory = Form.SubCategory;
+
+		_ = await StorageService.UpdateRecording(Recording);
+
+		await DetermineCanUpload();
+		StateHasChanged();
+	}
+
+	private async Task Upload()
+	{
+		IsUploading = true;
+		StateHasChanged();
+
+		var response = await SonicBriefService.UploadAsync(Recording);
+
+		// If the response contains a JobId, update the recording status and job ID
+		if (!string.IsNullOrWhiteSpace(response.JobId))
+		{
+			Recording.Status = RecordingStatusHelpers.GetRecordingStatus(response.Status);
+			Recording.JobId = response.JobId;
+			Recording.UpdatedAt = DateTimeOffset.UtcNow;
+			_ = await StorageService.UpdateRecording(Recording);
+
+			NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Upload complete" });
+		}
+		else
+		{
+			NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Upload failed" });
+		}
+
+		IsUploading = false;
+		StateHasChanged();
+	}
+
+	private async Task Delete()
+	{
+		var hasBeenConfirmed = await DialogService.Confirm("Are you sure you want to delete this recording?", "Delete recording", new ConfirmOptions() { OkButtonText = "Yes", CancelButtonText = "No" });
+		if (hasBeenConfirmed != true)
+		{
+			return;
+		}
+
+		await StorageService.DeleteRecording(RecordingId);
+		NavigationManager.NavigateTo("/uploads");
+	}
+
+	private void Close()
+	{
+		if (!EditContext.Validate())
+		{
+			return;
+		}
+
+		StopAudio();
+
+		NavigationManager.NavigateTo("/uploads");
+	}
+
+	private async Task GetRecording()
+	{
+		var recordings = await StorageService.GetRecordings();
+		if (recordings.Count == 0)
+		{
+			NavigationManager.NavigateTo("/uploads");
+		}
+
+		var recording = recordings.FirstOrDefault(_ => _.Id == RecordingId);
+		if (recording is null)
+		{
+			NavigationManager.NavigateTo("/uploads");
+		}
+
+		Recording = recording;
+
+		if (!string.IsNullOrEmpty(Recording?.RecordingPath))
+		{
+			AudioPlayerService.Load(Recording.RecordingPath);
+		}
+	}
+
+	private async Task Login()
+	{
+		await AuthenticationStateProvider.SignInInteractively(CancellationToken.None);
+		await GetInitialData();
+	}
+
+	private void OnChangeCategory(object category)
+	{
+		Form.SubCategory = null;
+
+		var selectedCategory = AllCategories.FirstOrDefault(c => c.Name == category.ToString());
+		if (selectedCategory != null)
+		{
+			FilteredSubCategories = AllSubCategories.Where(_ => _.CategoryId == selectedCategory.Id).ToList();
+		}
+		else
+		{
+			FilteredSubCategories = [];
+		}
+
+		StateHasChanged();
+	}
+
+	private void OnChangeSubCategory(object subCategory)
+	{
+		StateHasChanged();
+	}
+
+	private async Task GetCategories()
+	{
+		AllCategories = await SonicBriefService.GetCategoriesAsync();
+		AllSubCategories = await SonicBriefService.GetSubcategoriesAsync();
+
+		if (Form.Category is not null)
+		{
+			var selectedCategory = AllCategories.FirstOrDefault(c => c.Name == Form.Category.Name);
+			if (selectedCategory != null)
+			{
+				FilteredSubCategories = AllSubCategories.Where(_ => _.CategoryId == selectedCategory.Id).ToList();
+			}
+			else
+			{
+				FilteredSubCategories = [];
+			}
+		}
+	}
+
+	private void PlayAudio()
+	{
+		AudioPlayerService.Play();
+	}
+
+	private void StopAudio()
+	{
+		AudioPlayerService.Stop();
+	}
+
+	private void PauseAudio()
+	{
+		AudioPlayerService.Pause();
+	}
+
+	private void SeekAudio(double position)
+	{
+		AudioPlayerService.Seek(position);
+		StateHasChanged();
+	}
+
+	private void OnPropertyChanged()
+	{
+		InvokeAsync(StateHasChanged);
+	}
+
+	private async Task GetInitialData()
+	{
+		IsLoading = true;
+		StateHasChanged();
+
+		IsLoggedIn = await AuthService.IsLoggedIn();
+
+		// Get recording from storage
+		await GetRecording();
+
+		// Create edit form with the recording data
+		Form.CaseId = Recording.CaseId;
+		Form.Category = Recording.Category;
+		Form.SubCategory = Recording.SubCategory;
+
+		// Get categories and subcategories
+		await GetCategories();
+
+		// Update can upload status
+		await DetermineCanUpload();
+
+		IsLoading = false;
+		StateHasChanged();
+	}
+
+	private async Task DetermineCanUpload()
+	{
+		if (!await AuthService.IsLoggedIn())
+		{
+			CanUpload = false;
+			return;
+		}
+
+		if (NetworkAccess != NetworkAccess.Internet)
+		{
+			CanUpload = false;
+			return;
+		}
+
+		if (EditContext is null || !EditContext.Validate())
+		{
+			CanUpload = false;
+			return;
+		}
+
+		if (Recording?.CanUpload != true)
+		{
+			CanUpload = false;
+			return;
+		}
+
+		CanUpload = true;
+	}
+
+	private void ViewAnalysis()
+	{
+		NavigationManager.NavigateTo($"/uploads/{Recording.Id}/analysis");
+	}
+
+	private void ViewTranscription()
+	{
+		NavigationManager.NavigateTo($"/uploads/{Recording.Id}/transcription");
+	}
+}

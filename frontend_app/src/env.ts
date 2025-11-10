@@ -1,20 +1,44 @@
-import * as yup from "yup";
+// Environment variables configuration for the frontend
+export const env = {
+  VITE_BASE_URL: import.meta.env.VITE_BASE_URL || "/",
+  VITE_AUTH_METHOD: import.meta.env.VITE_AUTH_METHOD || "both",
+  VITE_DEBUG: import.meta.env.VITE_DEBUG === "true" || import.meta.env.DEV === true,
+  VITE_API_URL: import.meta.env.VITE_API_URL || "http://localhost:8000",
+  // App branding
+  VITE_APP_TITLE: import.meta.env.VITE_APP_TITLE || "OneWales Digital",
+  VITE_APP_SUBTITLE: import.meta.env.VITE_APP_SUBTITLE || "Sonic Brief",
+  // Azure AD/Entra ID Configuration
+  VITE_AZURE_CLIENT_ID: import.meta.env.VITE_AZURE_CLIENT_ID,
+  VITE_AZURE_TENANT_ID: import.meta.env.VITE_AZURE_TENANT_ID,
+  VITE_AZURE_BACKEND_SCOPE: import.meta.env.VITE_AZURE_BACKEND_SCOPE,
+  VITE_AZURE_AUDIENCE: import.meta.env.VITE_AZURE_AUDIENCE,
+} as const;
 
-// Define schema for Vite's built-in env variables
-// These are always available and typed by Vite itself
-const viteEnvSchema = yup.object({
-  VITE_BASE_URL: yup.string().default("/").required("VITE_BASE_URL is required"),
-});
+// Type-safe auth method check
+export const authConfig = {
+  isLegacyEnabled: () => env.VITE_AUTH_METHOD === "legacy" || env.VITE_AUTH_METHOD === "both",
+  isEntraEnabled: () => env.VITE_AUTH_METHOD === "entra" || env.VITE_AUTH_METHOD === "both",
+  isEntraOnly: () => env.VITE_AUTH_METHOD === "entra",
+  isLegacyOnly: () => env.VITE_AUTH_METHOD === "legacy",
+} as const;
 
-// Validate and cast Vite's built-in environment variables
-// Note: Vite guarantees these exist, so casting is mainly for type consistency
-const parsedViteEnv = viteEnvSchema.cast(import.meta.env);
+// Azure configuration check
+export const azureConfig = {
+  isConfigured: () => !!(env.VITE_AZURE_CLIENT_ID && env.VITE_AZURE_TENANT_ID && env.VITE_AZURE_BACKEND_SCOPE),
+  isMissingConfig: () => !env.VITE_AZURE_CLIENT_ID || !env.VITE_AZURE_TENANT_ID || !env.VITE_AZURE_BACKEND_SCOPE,
+  getMissingVars: () => {
+    const missing = [];
+    if (!env.VITE_AZURE_CLIENT_ID) missing.push('VITE_AZURE_CLIENT_ID');
+    if (!env.VITE_AZURE_TENANT_ID) missing.push('VITE_AZURE_TENANT_ID');
+    if (!env.VITE_AZURE_BACKEND_SCOPE) missing.push('VITE_AZURE_BACKEND_SCOPE');
+    return missing;
+  },
+} as const;
 
-// Define the combined type for the validated environment variables
-type ParsedViteEnv = yup.InferType<typeof viteEnvSchema>;
-type ParsedEnv =  ParsedViteEnv;
-
-// Export the validated and merged environment variables
-export const env: ParsedEnv = {
-  ...parsedViteEnv,
-};
+// Debug configuration
+export const debugConfig = {
+  isEnabled: () => env.VITE_DEBUG,
+  showAuthDebug: () => env.VITE_DEBUG,
+  showPerformanceMetrics: () => env.VITE_DEBUG,
+  showErrorDetails: () => env.VITE_DEBUG,
+} as const;

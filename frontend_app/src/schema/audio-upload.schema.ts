@@ -10,4 +10,10 @@ export const audioUploadSchema = z.object({
   }),
 });
 
+// Enhanced schema with case_id support
+export const enhancedAudioUploadSchema = audioUploadSchema.extend({
+  caseId: z.string().optional(),
+});
+
 export type AudioUploadValues = z.infer<typeof audioUploadSchema>;
+export type EnhancedAudioUploadValues = z.infer<typeof enhancedAudioUploadSchema>;

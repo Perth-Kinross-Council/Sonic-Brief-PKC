@@ -1,25 +1,7 @@
 # Backend specific
 infra/.terraform.lock.hcl
 .$ArchDesign.drawio.bkp
-/backend/.env
-/backend/.env.test
-/backend/venv/
-/backend/results/
-/backend/uploads/
-/backend/temp/
-/frontend/.next/
-/frontend/.vscode/
-/frontend/node_modules/
-az_func_audio_processor/.venv/
-az_func_audio_processor/.vscode/
-az_func_audio_processor/.local/
-az_func_audio_processor/.pytest_cache/
-az_func_audio_processor/.serverless/
-az_func_audio_processor/.serverless_plugins/
-az_func_audio_processor/.serverless_plugins_cache/
-az_func_audio_processor/.serverless-state.json
-az_func_audio_processor/__pycache__
-az_func_audio_processor/.env
+/frontend_app/.tanstack/
 **.env
 
 # Python
@@ -91,7 +73,6 @@ yarn.lock
 
 
 infra/.terraform.lock.hcl
-infra/deploy.bat
 
 # Misc
 .DS_Store
@@ -99,7 +80,10 @@ infra/deploy.bat
 .env.local
 .env.development.local
 .env.test.local
-.env.production.local 
+.env.production.local
+backend.aip
+az-func-audio.zip
+/infra/backend.zip
 
 # Ignore .terraform directories in infra/
 infra/.terraform/
@@ -125,3 +109,58 @@ infra/terraform.rc
 infra/terraform.tfvars
 infra/terraform.tfvars.json
 infra/*_credentials.tfvars
+infra/variables.tf
+
+# Integration reference backups (temporary development files)
+backend_app/test_mobile_endpoints.py
+backend_app/test_mobile_unit_tests.py
+backend_app/quick_mobile_test.py
+backend_app/test_endpoints.http
+backend_app/quick_test.http
+backend_app/migrate_via_api.ps1
+backend_app/migrate_users.ps1
+backend_app/migrate_users.http
+backend_app/debug_user_auth.py
+backend_app/debug_user_auth.http
+LEGACY_ROLE_FIX_SUMMARY.md
+FRONTEND_DEBUG.md
+ROUTING_FIX_SUMMARY.md
+TEST_COMPLETE_FLOW.http
+transcription-diagnostic.html
+frontend-diagnostic.html
+backend_app/TROUBLESHOOTING.md
+msal-token-extractor.js
+backend_app/scripts/migrate_users_hybrid_fields.py
+Reference ONLY
+webapp_logs.zip
+deploy-backend-fix.sh
+backend_fixed.zip
+backend_fixed_imports.zip
+backend_deploy.zip
+Reference ONLY - DISABLED
+AUDIT_LOGGING_IMPLEMENTATION.md
+AZURE_DEPLOYMENT_GUIDE.md
+DEPLOYMENT_READY_STATUS.md
+DEPLOYMENT_SUCCESS_VERIFICATION.md
+QUICK_INTEGRATION_GUIDE.md
+MINIMAL_DISRUPTION_LOGGING_PLAN.md
+IMPLEMENTATION_PROGRESS_TRACKER.md
+test_analytics_api.html
+test_audit_logging.py
+test_backend_endpoints.html
+backend_app/test_login_audit.py
+backend_app/app/routers/audit_enhanced_upload_example.py
+frontend_app/dist.zip
+
+.fake
+infra/backup zips
+infra/backup zips/
+infra/backup zips/*.zip
+
+# Azurite (Azure Storage Emulator) local data
+__azurite_db_*.json
+__blobstorage__/
+__queuestorage__/
+__tablestorage__/
+*.azurite
+

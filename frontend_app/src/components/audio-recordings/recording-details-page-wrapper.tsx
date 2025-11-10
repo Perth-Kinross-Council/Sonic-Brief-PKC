@@ -1,8 +1,9 @@
-import type { AudioRecording } from "@/components/audio-recordings/audio-recordings-context";
+import type { AudioRecording } from "@/components/audio-recordings/audio-recording-types";
 import { useEffect, useState } from "react";
 import { RecordingDetailsPage } from "@/components/audio-recordings/recording-details-page";
 import { JOBS_API } from "@/lib/apiConstants";
 import { useRouter } from "@tanstack/react-router";
+import { fetchJsonStrict } from "@/lib/api";
 
 interface RecordingDetailsPageWrapperProps {
   id: string;
@@ -12,7 +13,8 @@ export function RecordingDetailsPageWrapper({
   id,
 }: RecordingDetailsPageWrapperProps) {
   const router = useRouter();
-  const [recording, setRecording] = useState<AudioRecording | null>(null);
+  type CompatibleRecording = AudioRecording & { status: any };
+  const [recording, setRecording] = useState<CompatibleRecording | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,23 +49,22 @@ export function RecordingDetailsPageWrapper({
         }
 
         // Optional: If your API supports fetching a single recording by ID
-        const response = await fetch(`${JOBS_API}/${recordingId}`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
+        try {
+          const data: any = await fetchJsonStrict(`${JOBS_API}/${recordingId}`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
           setRecording(data.job);
           setIsLoading(false);
           return true;
+        } catch {
+          return false;
         }
-        return false;
-      } catch (error) {
-        console.error("Error fetching recording by ID:", error);
+      } catch (err) {
+        console.error("Error fetching recording by ID:", err);
         return false;
       }
     };
@@ -74,11 +75,11 @@ export function RecordingDetailsPageWrapper({
         const cachedJobs = safeGetLocalStorage("cachedJobs");
 
         if (cachedJobs) {
-          const jobs = JSON.parse(cachedJobs) as Array<AudioRecording>;
-          const job = jobs.find((job: AudioRecording) => job.id === actualId);
+          const jobs = JSON.parse(cachedJobs) as Array<CompatibleRecording>;
+          const foundJob = jobs.find((j: CompatibleRecording) => j.id === actualId);
 
-          if (job) {
-            setRecording(job);
+          if (foundJob) {
+            setRecording(foundJob);
             setIsLoading(false);
             return true;
           }

@@ -1,37 +1,44 @@
-import type { AudioListValues } from "@/schema/audio-list.schema";
-import { httpClient } from "@/api/httpClient";
-import { JOBS_API, TRANSCRIPTION_API } from "@/lib/apiConstants";
+import { TRANSCRIPTION_API } from "@/lib/apiConstants";
+import { useUnifiedAccessToken } from "@/lib/api";
 
-export interface AudioRecording {
-  id: string;
-  user_id: string;
-  file_path: string;
-  transcription_file_path: string | null;
-  analysis_file_path: string | null;
-  prompt_category_id: string;
-  prompt_subcategory_id: string;
-  status: "uploaded" | "processing" | "completed" | "error";
-  transcription_id: string | null;
-  created_at: number;
-  updated_at: number;
-  type: string;
-  _rid: string;
-  _self: string;
-  _etag: string;
-  _attachments: string;
-  _ts: number;
-}
+export function useFetchTranscription() {
+  const getToken = useUnifiedAccessToken();
+  return async (id: string): Promise<string> => {
+    try {
+  // Removed commented debug logging: fetching transcription by ID
+      const token = await getToken();
+      const url = `${TRANSCRIPTION_API}/${id}`;
+  // Removed commented debug logging: transcription API URL
 
-export async function getAudioRecordings(filters?: AudioListValues) {
-  const response = await httpClient.get(JOBS_API, {
-    params: filters,
-  });
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-  return response.data.jobs as Array<AudioRecording>;
-}
+  // Removed commented debug logging: transcription API response status
 
-export async function getAudioTranscription(id: string) {
-  const response = await httpClient.get(`${TRANSCRIPTION_API}/${id}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        // Gracefully handle not-ready transcripts
+        if (response.status === 404) {
+          // Transcription not available yet; return empty without throwing
+          return "";
+        }
+        console.error('Transcription API error:', response.status, errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
 
-  return response.data as string;
+      const text = await response.text();
+  // Removed commented debug logging: transcription length loaded
+      return text;
+    } catch (error) {
+      // Avoid noisy logs during expected not-ready windows
+      // Still rethrow for non-404 scenarios handled above
+      console.error('Error in useFetchTranscription:', error);
+      throw error;
+    }
+  };
 }

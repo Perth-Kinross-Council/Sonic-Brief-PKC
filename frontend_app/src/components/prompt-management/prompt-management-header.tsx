@@ -1,12 +1,6 @@
 import type { AddCategoryFormValues } from "@/schema/prompt-management.schema";
 import { useState } from "react";
-import { createCategory } from "@/api/prompt-management";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
+import { useCreateCategory } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,16 +19,20 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { getPromptManagementCategoriesQuery } from "@/queries/prompt-management.query";
+import type { CategoryResponse } from "@/lib/api";
 import { queryClient } from "@/queryClient";
 import { addCategoryFormSchema } from "@/schema/prompt-management.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, FileText } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { notifyError } from '@/lib/notify';
 
 export function PromptManagementHeader() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const addCategory = useCreateCategory();
 
   const form = useForm<AddCategoryFormValues>({
     resolver: zodResolver(addCategoryFormSchema),
@@ -45,8 +43,8 @@ export function PromptManagementHeader() {
 
   const { mutate: addCategoryMutation, isPending } = useMutation({
     mutationKey: ["sonic-brief/prompt-management/add-category"],
-    mutationFn: (name: string) => createCategory(name),
-    onMutate: async (newName) => {
+    mutationFn: async ({ name }: { name: string }) => await addCategory(name),
+    onMutate: async ({ name }) => {
       await queryClient.cancelQueries({
         queryKey: getPromptManagementCategoriesQuery().queryKey,
       });
@@ -57,9 +55,15 @@ export function PromptManagementHeader() {
 
       queryClient.setQueryData(
         getPromptManagementCategoriesQuery().queryKey,
-        (old) => {
-          // @ts-expect-error - old can be undefined and typescript is not happy about it
-          return [...old, { id: "new-category", name: newName }];
+        (old?: CategoryResponse[]) => {
+          const prev = Array.isArray(old) ? old : [];
+          const next: CategoryResponse = {
+            id: "new-category",
+            name,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as CategoryResponse;
+          return [...prev, next];
         },
       );
 
@@ -67,17 +71,12 @@ export function PromptManagementHeader() {
 
       return { previousCategories };
     },
-
-    onError: (error, _newName, context) => {
+    onError: (error, _vars, context) => {
       queryClient.setQueryData(
         getPromptManagementCategoriesQuery().queryKey,
         context?.previousCategories,
       );
-
-      toast.error("Error", {
-        description:
-          error instanceof Error ? error.message : "Failed to create category",
-      });
+  notifyError(error, 'Failed to create category');
     },
     onSuccess: () => {
       toast.success("Success", {
@@ -88,24 +87,27 @@ export function PromptManagementHeader() {
   });
 
   const onSubmit = (values: AddCategoryFormValues) => {
-    addCategoryMutation(values.name);
+    addCategoryMutation({ name: values.name });
   };
 
   return (
     <>
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className="text-2xl font-semibold tracking-tight">
+          <nav
+            className="flex items-center text-sm text-muted-foreground mb-1"
+            aria-label="Breadcrumb"
+          >
+            <a href="/home" className="hover:underline">
+              Home
+            </a>
+            <span className="mx-2">&gt;</span>
+            <span className="font-semibold">Prompt Management</span>
+          </nav>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            <FileText className="h-5 w-5" />
             Prompt Management
           </h2>
-          <Breadcrumb>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbItem>
-              <BreadcrumbPage>Prompt Management</BreadcrumbPage>
-            </BreadcrumbItem>
-          </Breadcrumb>
           <p className="text-muted-foreground text-sm">
             Manage categories, subcategories, and prompts for your AI system.
           </p>

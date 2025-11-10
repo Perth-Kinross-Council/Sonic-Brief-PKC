@@ -1,0 +1,109 @@
+# ASP.NET
+# Build and test ASP.NET projects.
+# Add steps that publish symbols, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
+
+trigger: none
+
+pool:
+    vmImage: "macos-15"
+    demands: xcode
+
+steps:
+    # - task: PowerShell@2
+    #   displayName: Select Xcode Version
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       sudo xcode-select -s /Applications/Xcode_15.2.app
+
+    - task: PowerShell@2
+      displayName: Select Xcode Version
+      inputs:
+          targetType: "inline"
+          script: |
+              sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
+
+    # - task: Bash@3
+    #   displayName: "Select Latest Xcode Version"
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #         echo "Mac OS version:"
+    #         sw_vers -productVersion
+
+    #         echo "Installed Xcode versions:"
+    #         ls /Applications | grep 'Xcode'
+
+    #         echo "Currently selected Xcode:"
+    #         xcrun xcode-select --print-path
+
+    #         echo "Finding the latest Xcode version..."
+    #         latest_xcode=$(ls /Applications | grep 'Xcode' | sort -Vr | head -n 1)
+
+    #         echo "Latest Xcode version is: $latest_xcode"
+
+    #         echo "Selecting the latest Xcode version..."
+    #         sudo xcode-select -s "/Applications/$latest_xcode/Contents/Developer"
+
+    #         echo "Currently selected Xcode:"
+    #         xcrun xcode-select --print-path
+
+    #         echo "Xcode version details:"
+    #         xcodebuild -version
+
+    - task: CmdLine@2
+      displayName: "Install Maui Workload"
+      inputs:
+          script: "dotnet workload install maui"
+
+    - task: InstallAppleCertificate@2
+      displayName: "Install Apple P12 Cert"
+      inputs:
+          certSecureFile: "ServentDistCert.p12"
+          certPwd: "$(p12CertPWD)"
+          keychain: "temp"
+
+    - task: InstallAppleProvisioningProfile@1
+      displayName: "Install Apple Provisioning Profile"
+      inputs:
+          provisioningProfileLocation: "secureFiles"
+          provProfileSecureFile: "Servent.mobileprovision"
+
+    - task: DotNetCoreCLI@2
+      displayName: "Build the iOS Binaries"
+      inputs:
+          command: "publish"
+          publishWebProjects: false
+          projects: "**/*.App.csproj"
+          arguments: '-f:net9.0-ios -c:Release /p:ArchiveOnBuild=true /p:EnableAssemblyILStripping=false /p:CodesignKey="$(APPLE_CERTIFICATE_SIGNING_IDENTITY)" /p:CodesignProvision="$(APPLE_PROVISIONING_PROFILE)"'
+          zipAfterPublish: false
+
+    - task: CopyFiles@2
+      displayName: "Copy file from Build to Staging"
+      inputs:
+          SourceFolder: "$(Agent.BuildDirectory)"
+          Contents: "**/*.ipa"
+          TargetFolder: "$(Build.ArtifactStagingDirectory)"
+          CleanTargetFolder: true
+          OverWrite: true
+          flattenFolders: true
+
+    # - task: PublishBuildArtifacts@1
+    #   displayName: 'Publish the Staging Files.'
+    #   inputs:
+    #     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    #     ArtifactName: 'drop'
+    #     publishLocation: 'Container'
+
+    - task: AppStoreRelease@1
+      displayName: "Publish to the App Store TestFlight track"
+      inputs:
+          serviceEndpoint: "Servent App Store Connect"
+          releaseTrack: "TestFlight"
+          appIdentifier: "uk.co.servent.srswales.socialcare.app"
+          appType: "iOS"
+          ipaPath: "$(Build.ArtifactStagingDirectory)/**/*.ipa"
+          shouldSkipWaitingForProcessing: true
+          shouldSkipSubmission: true
+          appSpecificId: ""

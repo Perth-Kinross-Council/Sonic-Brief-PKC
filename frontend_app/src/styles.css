@@ -137,6 +137,19 @@ code {
   }
 }
 
+/* Scoped native audio control customizations to remove overflow/download menu */
+.sb-audio-basic::-webkit-media-controls-overflow-button,
+.sb-audio-basic::-webkit-media-controls-download-button,
+.sb-audio-basic::-webkit-media-controls-playback-rate-button,
+.sb-audio-basic::-webkit-media-controls-cast-button {
+  display: none !important;
+}
+
+/* Optional: prevent horizontal overflow that can reveal hidden buttons */
+.sb-audio-basic::-webkit-media-controls-enclosure {
+  overflow: hidden !important;
+}
+
 .w-md-editor-text-input,
 .w-md-editor-text {
   caret-color: hsl(var(--foreground));

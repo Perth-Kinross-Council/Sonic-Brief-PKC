@@ -1,0 +1,25 @@
+﻿@inject IConnectivity Connectivity
+
+@if (NetworkAccess != NetworkAccess.Internet)
+{
+	<div class="flex flex-col gap-1 p-5 bg-red-600 text-white text-sm">
+		<div>No internet detected. You will be unable to upload whilst disconnected.</div>
+	</div>
+}
+
+@code {
+	private NetworkAccess NetworkAccess { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		NetworkAccess = Connectivity.NetworkAccess;
+
+		Connectivity.ConnectivityChanged += (object? sender, ConnectivityChangedEventArgs e) =>
+		{
+			NetworkAccess = e.NetworkAccess;
+			StateHasChanged();
+		};
+
+		await base.OnInitializedAsync();
+	}
+}

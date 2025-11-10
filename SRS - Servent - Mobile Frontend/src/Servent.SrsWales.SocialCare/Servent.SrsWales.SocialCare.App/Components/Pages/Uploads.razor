@@ -1,0 +1,169 @@
+﻿@page "/uploads"
+@using Servent.SrsWales.SocialCare.App.Data
+@using Servent.SrsWales.SocialCare.App.Services
+@using Servent.SrsWales.SocialCare.App.Services.SonicBrief
+@using Servent.SrsWales.SocialCare.App.Services.SonicBrief.Models
+
+@inject IAudioPlayerService AudioPlayerService
+@inject StorageService StorageService
+@inject SonicBriefService SonicBriefService
+@inject NavigationManager NavigationManager
+@inject MsalAuthenticationService AuthenticationStateProvider
+@inject UserService AuthService
+
+<ConnectivityCheckHeader />
+
+@if (!IsLoading && !IsLoggedIn)
+{
+	<div class="p-5">
+		<div class="flex p-5 bg-gray-600 text-white text-sm rounded-lg justify-between gap-2">
+			<div>
+				You are not logged in and will be unable to upload whilst logged out.
+			</div>
+
+			<div>
+				<RadzenButton Click=@Login Text="Login" ButtonStyle="ButtonStyle.Light" class="!rounded-full" />
+			</div>
+		</div>
+	</div>
+}
+
+<div class="flex flex-col">
+	@if (IsLoading)
+	{
+		<div class="flex justify-center items-center mt-12">
+			<RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Dark" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+		</div>
+	}
+	else
+	{
+		@if (Recordings.Count == 0)
+		{
+			<div class="p-5 text-center text-gray-400 mt-16 font-medium">No recordings available.</div>
+		}
+
+		@foreach (var recording in Recordings)
+		{
+			<div class="flex flex-col p-5" @onclick="(() => SelectRecording(recording))">
+				<div class="flex flex-col">
+					<div class="flex gap-3 justify-between items-center">
+						<div class="text-sm font-medium">
+							@recording.CreatedAt.ToLocalTime().ToString("f")
+						</div>
+					</div>
+
+					<div class="flex gap-3 justify-between items-center">
+						<div class="text-xs text-gray-500 wrap-break-word">Case: @recording.CaseId</div>
+
+						@switch (recording.Status)
+						{
+							case Status.Pending:
+								<RadzenBadge BadgeStyle="BadgeStyle.Secondary" Text="Pending" />
+								break;
+
+							case Status.Uploaded:
+								<RadzenBadge BadgeStyle="BadgeStyle.Info" Text="Uploaded" />
+								break;
+
+							case Status.Processing:
+								<RadzenBadge BadgeStyle="BadgeStyle.Info" Text="Processing" />
+								break;
+
+							case Status.Completed:
+								<RadzenBadge BadgeStyle="BadgeStyle.Success" Text="Complete" />
+								break;
+
+							case Status.Failed:
+								<RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="Failed" />
+								break;
+						}
+					</div>
+
+					<div class="flex gap-1 justify-between">
+						<div class="text-xs text-gray-500 wrap-break-word">
+							@if (recording.SubCategory != null)
+							{
+								@recording.Category.Name
+								<text> / </text>
+								@recording.SubCategory.Name
+							}
+							else
+							{
+								@recording.Category.Name
+							}
+						</div>
+						<div></div>
+					</div>
+				</div>
+			</div>
+
+			<div class="h-px px-5 bg-gray-200 w-full"></div>
+		}
+	}
+</div>
+
+@code {
+	private List<Recording> Recordings { get; set; } = [];
+	private bool IsLoading { get; set; } = true;
+	private bool IsLoggedIn { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		await GetInitialData();
+
+		await base.OnInitializedAsync();
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			var jobs = await SonicBriefService.GetJobs();
+			await ProcessJobs(jobs);
+			Recordings = await StorageService.GetRecordings();
+			StateHasChanged();
+		}
+
+		base.OnAfterRender(firstRender);
+	}
+
+	private void SelectRecording(Recording recording)
+	{
+		var recordingId = recording.Id;
+		NavigationManager.NavigateTo($"/uploads/{recordingId}");
+	}
+
+	private async Task Delete(Guid id)
+	{
+		await StorageService.DeleteRecording(id);
+		Recordings = await StorageService.GetRecordings();
+	}
+
+	private async Task ProcessJobs(JobsResponse? jobs)
+	{
+		if (jobs == null || jobs.Jobs == null || jobs.Jobs.Count == 0)
+		{
+			return;
+		}
+
+		await StorageService.UpdateRecordingsFromJobs(jobs.Jobs);
+	}
+
+	private async Task Login()
+	{
+		await AuthenticationStateProvider.SignInInteractively(CancellationToken.None);
+		await GetInitialData();
+	}
+
+	private async Task GetInitialData()
+	{
+		IsLoading = true;
+		StateHasChanged();
+
+		IsLoggedIn = await AuthService.IsLoggedIn();
+		Recordings = await StorageService.GetRecordings();
+
+		IsLoading = false;
+		StateHasChanged();
+	}
+}

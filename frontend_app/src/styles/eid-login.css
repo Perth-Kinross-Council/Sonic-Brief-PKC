@@ -1,0 +1,184 @@
+/* Exact Microsoft/Entra ID Login Page Styles */
+
+.eid-page {
+  font-family: "Segoe UI", "Segoe UI Web (West European)", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.eid-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.eid-card {
+  background-color: #ffffff;
+  border-radius: 2px;
+  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2);
+  max-width: 440px;
+  width: 100%;
+  padding: 44px;
+  box-sizing: border-box;
+}
+
+.eid-logo-container {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.eid-logo {
+  width: 108px;
+  height: 24px;
+  color: #737373;
+}
+
+.eid-title-container {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.eid-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1b1b1b;
+  margin: 0;
+  line-height: 28px;
+  letter-spacing: 0.01em;
+}
+
+.eid-form-group {
+  margin-bottom: 16px;
+}
+
+.eid-input {
+  width: 100%;
+  height: 32px;
+  padding: 8px 12px;
+  font-size: 15px;
+  border: 1px solid #605e5c;
+  border-radius: 2px;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  background-color: #ffffff;
+}
+
+.eid-input:focus {
+  border-color: #0078d4;
+  box-shadow: inset 0 0 0 1px #0078d4;
+}
+
+.eid-button-group {
+  margin-bottom: 24px;
+}
+
+.eid-button {
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-family: inherit;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eid-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.eid-button-primary {
+  background-color: #0078d4;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.eid-button-primary:hover:not(:disabled) {
+  background-color: #106ebe;
+}
+
+.eid-button-secondary {
+  background-color: #ffffff;
+  color: #323130;
+  border: 1px solid #8a8886;
+}
+
+.eid-button-secondary:hover:not(:disabled) {
+  background-color: #f3f2f1;
+}
+
+.eid-separator {
+  margin: 24px 0;
+  text-align: center;
+  position: relative;
+}
+
+.eid-separator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: #eaeaea;
+}
+
+.eid-separator-text {
+  background-color: #ffffff;
+  color: #323130;
+  font-size: 13px;
+  padding: 0 16px;
+  position: relative;
+}
+
+.eid-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+}
+
+.eid-signin-options {
+  text-align: center;
+}
+
+.eid-link {
+  color: #0078d4;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.eid-link:hover {
+  text-decoration: underline;
+}
+
+.eid-footer {
+  padding: 20px;
+  text-align: center;
+}
+
+.eid-footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.eid-footer-link {
+  color: #ffffff;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.eid-footer-link:hover {
+  text-decoration: underline;
+}

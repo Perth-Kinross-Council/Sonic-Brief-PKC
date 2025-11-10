@@ -1,17 +1,2 @@
-import { getStorageItem } from "@/lib/storage";
-import axios from "axios";
-
-export const httpClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-httpClient.interceptors.request.use((config) => {
-  const accessToken = getStorageItem("token", "");
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
-  }
-  return config;
-});
+// This file is deprecated. All API calls should use hooks from @/lib/api instead.
+// Please use the hooks in @/lib/api.ts for all API operations.

@@ -1,7 +1,7 @@
-import type { CategoryResponse } from "@/api/prompt-management";
 import type { EditCategoryFormValues } from "@/schema/prompt-management.schema";
 import { useEffect } from "react";
-import { updateCategory } from "@/api/prompt-management";
+import { useUpdateCategory } from "@/lib/api";
+import type { CategoryResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useOptimisticMutation } from "@/hooks/use-optimistic-mutation";
-import { getPromptManagementCategoriesQuery } from "@/queries/prompt-management.query";
 import { editCategoryFormSchema } from "@/schema/prompt-management.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -35,6 +34,8 @@ export function EditCategoryDialog({
   onOpenChange,
   category,
 }: EditCategoryDialogProps) {
+  const updateCategory = useUpdateCategory();
+  
   const form = useForm<EditCategoryFormValues>({
     resolver: zodResolver(editCategoryFormSchema),
     defaultValues: {
@@ -46,19 +47,22 @@ export function EditCategoryDialog({
   useEffect(() => {
     if (category) {
       form.reset({
-        name: category.name,
-        id: category.id,
+        name: category.name || "",
+        id: category.id || "",
       });
     }
   }, [category, form]);
 
   const { mutate: editCategoryMutation, isPending } = useOptimisticMutation({
-    mutationFn: updateCategory,
-    queryKey: getPromptManagementCategoriesQuery().queryKey,
-    updateFn: (old = [], newData) =>
-      old.map((cat) =>
+    mutationFn: ({ categoryId, name }: { categoryId: string; name: string }) => {
+      return updateCategory(categoryId, name);
+    },
+    queryKey: ["sonic-brief", "prompt-management", "categories"],
+    updateFn: (old: CategoryResponse[] = [], newData: { categoryId: string; name: string }) => {
+      return old.map((cat: CategoryResponse) =>
         cat.id === newData.categoryId ? { ...cat, name: newData.name } : cat,
-      ),
+      );
+    },
     successMessage: "Category updated successfully",
     onMutateSideEffect: () => {
       form.reset();
@@ -67,6 +71,11 @@ export function EditCategoryDialog({
   });
 
   const onSubmit = (values: EditCategoryFormValues) => {
+    if (!values.id) {
+      console.error("[EditCategoryDialog] No category ID available for update");
+      return;
+    }
+    
     editCategoryMutation({
       categoryId: values.id,
       name: values.name,
@@ -100,7 +109,7 @@ export function EditCategoryDialog({
             />
 
             <div className="text-muted-foreground text-xs">
-              Category ID: {category.id}
+              Category ID: {category.id || "Not available"}
             </div>
             <div className="flex justify-end space-x-2">
               <Button

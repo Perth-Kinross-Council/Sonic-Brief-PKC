@@ -8,16 +8,28 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { createFileRoute } from '@tanstack/react-router'
+
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as LoginImport } from './routes/login'
 import { Route as LayoutImport } from './routes/_layout'
 import { Route as IndexImport } from './routes/index'
+import { Route as LayoutUserManagementIndexImport } from './routes/_layout/user-management/index'
+import { Route as LayoutTranscriptUploadIndexImport } from './routes/_layout/transcript-upload/index'
+import { Route as LayoutRecordAudioIndexImport } from './routes/_layout/record-audio/index'
 import { Route as LayoutPromptManagementIndexImport } from './routes/_layout/prompt-management/index'
+import { Route as LayoutHomeIndexImport } from './routes/_layout/home/index'
+import { Route as LayoutAuditIndexImport } from './routes/_layout/audit/index'
 import { Route as LayoutAudioUploadIndexImport } from './routes/_layout/audio-upload/index'
 import { Route as LayoutAudioRecordingsIndexImport } from './routes/_layout/audio-recordings/index'
+import { Route as LayoutAnalyticsIndexImport } from './routes/_layout/analytics/index'
 import { Route as LayoutAudioRecordingsIdImport } from './routes/_layout/audio-recordings/$id'
+
+// Create Virtual Routes
+
+const LayoutAnalyticsLazyImport = createFileRoute('/_layout/analytics')()
 
 // Create/Update Routes
 
@@ -38,12 +50,51 @@ const IndexRoute = IndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const LayoutAnalyticsLazyRoute = LayoutAnalyticsLazyImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => LayoutRoute,
+} as any).lazy(() =>
+  import('./routes/_layout/analytics.lazy').then((d) => d.Route),
+)
+
+const LayoutUserManagementIndexRoute = LayoutUserManagementIndexImport.update({
+  id: '/user-management/',
+  path: '/user-management/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutTranscriptUploadIndexRoute =
+  LayoutTranscriptUploadIndexImport.update({
+    id: '/transcript-upload/',
+    path: '/transcript-upload/',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+
+const LayoutRecordAudioIndexRoute = LayoutRecordAudioIndexImport.update({
+  id: '/record-audio/',
+  path: '/record-audio/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
 const LayoutPromptManagementIndexRoute =
   LayoutPromptManagementIndexImport.update({
     id: '/prompt-management/',
     path: '/prompt-management/',
     getParentRoute: () => LayoutRoute,
   } as any)
+
+const LayoutHomeIndexRoute = LayoutHomeIndexImport.update({
+  id: '/home/',
+  path: '/home/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutAuditIndexRoute = LayoutAuditIndexImport.update({
+  id: '/audit/',
+  path: '/audit/',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 const LayoutAudioUploadIndexRoute = LayoutAudioUploadIndexImport.update({
   id: '/audio-upload/',
@@ -58,6 +109,12 @@ const LayoutAudioRecordingsIndexRoute = LayoutAudioRecordingsIndexImport.update(
     getParentRoute: () => LayoutRoute,
   } as any,
 )
+
+const LayoutAnalyticsIndexRoute = LayoutAnalyticsIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LayoutAnalyticsLazyRoute,
+} as any)
 
 const LayoutAudioRecordingsIdRoute = LayoutAudioRecordingsIdImport.update({
   id: '/audio-recordings/$id',
@@ -90,12 +147,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginImport
       parentRoute: typeof rootRoute
     }
+    '/_layout/analytics': {
+      id: '/_layout/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof LayoutAnalyticsLazyImport
+      parentRoute: typeof LayoutImport
+    }
     '/_layout/audio-recordings/$id': {
       id: '/_layout/audio-recordings/$id'
       path: '/audio-recordings/$id'
       fullPath: '/audio-recordings/$id'
       preLoaderRoute: typeof LayoutAudioRecordingsIdImport
       parentRoute: typeof LayoutImport
+    }
+    '/_layout/analytics/': {
+      id: '/_layout/analytics/'
+      path: '/'
+      fullPath: '/analytics/'
+      preLoaderRoute: typeof LayoutAnalyticsIndexImport
+      parentRoute: typeof LayoutAnalyticsLazyImport
     }
     '/_layout/audio-recordings/': {
       id: '/_layout/audio-recordings/'
@@ -111,6 +182,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAudioUploadIndexImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/audit/': {
+      id: '/_layout/audit/'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof LayoutAuditIndexImport
+      parentRoute: typeof LayoutImport
+    }
+    '/_layout/home/': {
+      id: '/_layout/home/'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof LayoutHomeIndexImport
+      parentRoute: typeof LayoutImport
+    }
     '/_layout/prompt-management/': {
       id: '/_layout/prompt-management/'
       path: '/prompt-management'
@@ -118,23 +203,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutPromptManagementIndexImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/record-audio/': {
+      id: '/_layout/record-audio/'
+      path: '/record-audio'
+      fullPath: '/record-audio'
+      preLoaderRoute: typeof LayoutRecordAudioIndexImport
+      parentRoute: typeof LayoutImport
+    }
+    '/_layout/transcript-upload/': {
+      id: '/_layout/transcript-upload/'
+      path: '/transcript-upload'
+      fullPath: '/transcript-upload'
+      preLoaderRoute: typeof LayoutTranscriptUploadIndexImport
+      parentRoute: typeof LayoutImport
+    }
+    '/_layout/user-management/': {
+      id: '/_layout/user-management/'
+      path: '/user-management'
+      fullPath: '/user-management'
+      preLoaderRoute: typeof LayoutUserManagementIndexImport
+      parentRoute: typeof LayoutImport
+    }
   }
 }
 
 // Create and export the route tree
 
+interface LayoutAnalyticsLazyRouteChildren {
+  LayoutAnalyticsIndexRoute: typeof LayoutAnalyticsIndexRoute
+}
+
+const LayoutAnalyticsLazyRouteChildren: LayoutAnalyticsLazyRouteChildren = {
+  LayoutAnalyticsIndexRoute: LayoutAnalyticsIndexRoute,
+}
+
+const LayoutAnalyticsLazyRouteWithChildren =
+  LayoutAnalyticsLazyRoute._addFileChildren(LayoutAnalyticsLazyRouteChildren)
+
 interface LayoutRouteChildren {
+  LayoutAnalyticsLazyRoute: typeof LayoutAnalyticsLazyRouteWithChildren
   LayoutAudioRecordingsIdRoute: typeof LayoutAudioRecordingsIdRoute
   LayoutAudioRecordingsIndexRoute: typeof LayoutAudioRecordingsIndexRoute
   LayoutAudioUploadIndexRoute: typeof LayoutAudioUploadIndexRoute
+  LayoutAuditIndexRoute: typeof LayoutAuditIndexRoute
+  LayoutHomeIndexRoute: typeof LayoutHomeIndexRoute
   LayoutPromptManagementIndexRoute: typeof LayoutPromptManagementIndexRoute
+  LayoutRecordAudioIndexRoute: typeof LayoutRecordAudioIndexRoute
+  LayoutTranscriptUploadIndexRoute: typeof LayoutTranscriptUploadIndexRoute
+  LayoutUserManagementIndexRoute: typeof LayoutUserManagementIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutAnalyticsLazyRoute: LayoutAnalyticsLazyRouteWithChildren,
   LayoutAudioRecordingsIdRoute: LayoutAudioRecordingsIdRoute,
   LayoutAudioRecordingsIndexRoute: LayoutAudioRecordingsIndexRoute,
   LayoutAudioUploadIndexRoute: LayoutAudioUploadIndexRoute,
+  LayoutAuditIndexRoute: LayoutAuditIndexRoute,
+  LayoutHomeIndexRoute: LayoutHomeIndexRoute,
   LayoutPromptManagementIndexRoute: LayoutPromptManagementIndexRoute,
+  LayoutRecordAudioIndexRoute: LayoutRecordAudioIndexRoute,
+  LayoutTranscriptUploadIndexRoute: LayoutTranscriptUploadIndexRoute,
+  LayoutUserManagementIndexRoute: LayoutUserManagementIndexRoute,
 }
 
 const LayoutRouteWithChildren =
@@ -144,10 +273,17 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
+  '/analytics': typeof LayoutAnalyticsLazyRouteWithChildren
   '/audio-recordings/$id': typeof LayoutAudioRecordingsIdRoute
+  '/analytics/': typeof LayoutAnalyticsIndexRoute
   '/audio-recordings': typeof LayoutAudioRecordingsIndexRoute
   '/audio-upload': typeof LayoutAudioUploadIndexRoute
+  '/audit': typeof LayoutAuditIndexRoute
+  '/home': typeof LayoutHomeIndexRoute
   '/prompt-management': typeof LayoutPromptManagementIndexRoute
+  '/record-audio': typeof LayoutRecordAudioIndexRoute
+  '/transcript-upload': typeof LayoutTranscriptUploadIndexRoute
+  '/user-management': typeof LayoutUserManagementIndexRoute
 }
 
 export interface FileRoutesByTo {
@@ -155,9 +291,15 @@ export interface FileRoutesByTo {
   '': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
   '/audio-recordings/$id': typeof LayoutAudioRecordingsIdRoute
+  '/analytics': typeof LayoutAnalyticsIndexRoute
   '/audio-recordings': typeof LayoutAudioRecordingsIndexRoute
   '/audio-upload': typeof LayoutAudioUploadIndexRoute
+  '/audit': typeof LayoutAuditIndexRoute
+  '/home': typeof LayoutHomeIndexRoute
   '/prompt-management': typeof LayoutPromptManagementIndexRoute
+  '/record-audio': typeof LayoutRecordAudioIndexRoute
+  '/transcript-upload': typeof LayoutTranscriptUploadIndexRoute
+  '/user-management': typeof LayoutUserManagementIndexRoute
 }
 
 export interface FileRoutesById {
@@ -165,10 +307,17 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
+  '/_layout/analytics': typeof LayoutAnalyticsLazyRouteWithChildren
   '/_layout/audio-recordings/$id': typeof LayoutAudioRecordingsIdRoute
+  '/_layout/analytics/': typeof LayoutAnalyticsIndexRoute
   '/_layout/audio-recordings/': typeof LayoutAudioRecordingsIndexRoute
   '/_layout/audio-upload/': typeof LayoutAudioUploadIndexRoute
+  '/_layout/audit/': typeof LayoutAuditIndexRoute
+  '/_layout/home/': typeof LayoutHomeIndexRoute
   '/_layout/prompt-management/': typeof LayoutPromptManagementIndexRoute
+  '/_layout/record-audio/': typeof LayoutRecordAudioIndexRoute
+  '/_layout/transcript-upload/': typeof LayoutTranscriptUploadIndexRoute
+  '/_layout/user-management/': typeof LayoutUserManagementIndexRoute
 }
 
 export interface FileRouteTypes {
@@ -177,28 +326,48 @@ export interface FileRouteTypes {
     | '/'
     | ''
     | '/login'
+    | '/analytics'
     | '/audio-recordings/$id'
+    | '/analytics/'
     | '/audio-recordings'
     | '/audio-upload'
+    | '/audit'
+    | '/home'
     | '/prompt-management'
+    | '/record-audio'
+    | '/transcript-upload'
+    | '/user-management'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | ''
     | '/login'
     | '/audio-recordings/$id'
+    | '/analytics'
     | '/audio-recordings'
     | '/audio-upload'
+    | '/audit'
+    | '/home'
     | '/prompt-management'
+    | '/record-audio'
+    | '/transcript-upload'
+    | '/user-management'
   id:
     | '__root__'
     | '/'
     | '/_layout'
     | '/login'
+    | '/_layout/analytics'
     | '/_layout/audio-recordings/$id'
+    | '/_layout/analytics/'
     | '/_layout/audio-recordings/'
     | '/_layout/audio-upload/'
+    | '/_layout/audit/'
+    | '/_layout/home/'
     | '/_layout/prompt-management/'
+    | '/_layout/record-audio/'
+    | '/_layout/transcript-upload/'
+    | '/_layout/user-management/'
   fileRoutesById: FileRoutesById
 }
 
@@ -235,18 +404,35 @@ export const routeTree = rootRoute
     "/_layout": {
       "filePath": "_layout.tsx",
       "children": [
+        "/_layout/analytics",
         "/_layout/audio-recordings/$id",
         "/_layout/audio-recordings/",
         "/_layout/audio-upload/",
-        "/_layout/prompt-management/"
+        "/_layout/audit/",
+        "/_layout/home/",
+        "/_layout/prompt-management/",
+        "/_layout/record-audio/",
+        "/_layout/transcript-upload/",
+        "/_layout/user-management/"
       ]
     },
     "/login": {
       "filePath": "login.tsx"
     },
+    "/_layout/analytics": {
+      "filePath": "_layout/analytics.lazy.tsx",
+      "parent": "/_layout",
+      "children": [
+        "/_layout/analytics/"
+      ]
+    },
     "/_layout/audio-recordings/$id": {
       "filePath": "_layout/audio-recordings/$id.tsx",
       "parent": "/_layout"
+    },
+    "/_layout/analytics/": {
+      "filePath": "_layout/analytics/index.tsx",
+      "parent": "/_layout/analytics"
     },
     "/_layout/audio-recordings/": {
       "filePath": "_layout/audio-recordings/index.tsx",
@@ -256,8 +442,28 @@ export const routeTree = rootRoute
       "filePath": "_layout/audio-upload/index.tsx",
       "parent": "/_layout"
     },
+    "/_layout/audit/": {
+      "filePath": "_layout/audit/index.tsx",
+      "parent": "/_layout"
+    },
+    "/_layout/home/": {
+      "filePath": "_layout/home/index.tsx",
+      "parent": "/_layout"
+    },
     "/_layout/prompt-management/": {
       "filePath": "_layout/prompt-management/index.tsx",
+      "parent": "/_layout"
+    },
+    "/_layout/record-audio/": {
+      "filePath": "_layout/record-audio/index.tsx",
+      "parent": "/_layout"
+    },
+    "/_layout/transcript-upload/": {
+      "filePath": "_layout/transcript-upload/index.tsx",
+      "parent": "/_layout"
+    },
+    "/_layout/user-management/": {
+      "filePath": "_layout/user-management/index.tsx",
       "parent": "/_layout"
     }
   }

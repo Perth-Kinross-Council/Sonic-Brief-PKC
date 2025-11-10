@@ -1,0 +1,92 @@
+# Lite Refactor Task 2: Example for allow_origins (comma separated). Leave blank to use defaults (SWA host + localhost)
+# allow_origins = "https://your-custom-app.azurestaticapps.net,https://admin.yourdomain.com"
+# -----------------------------------------------------------------------------
+# variables.tf.sample
+# -----------------------------------------------------------------------------
+# Purpose: Example / template values for environment-specific configuration.
+# Copy (or selectively merge) into a per‑environment tfvars file (recommended) or
+# adapt when standing up a new deployment. DO NOT commit real secrets.
+# -----------------------------------------------------------------------------
+
+# Core / subscription
+variable "subscription_id" { default = "00000000-1111-2222-3333-444444444444" }
+variable "prefix"          { default = "ow-" }
+variable "name"            { default = "sb-v2t" }
+variable "environment"     { default = "dev-v5" } # e.g. dev-v5 / test / prod
+variable "location"        { default = "uksouth" }
+
+# Networking / exposure
+variable "public_network_access_enabled" { default = true }
+
+# Frontend Static Web App hostname (update after first deploy if needed)
+variable "frontend_static_hostname" { default = "example-green-1234567890.z01.azurestaticapps.net" }
+
+# Entra ID (Azure AD) – mock GUIDs (replace with real)
+variable "azure_tenant_id"           { default = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" }
+variable "azure_client_id"           { default = "11111111-2222-3333-4444-555555555555" } # Backend API App Registration
+variable "azure_frontend_client_id"  { default = "66666666-7777-8888-9999-000000000000" } # Frontend App Registration
+variable "azure_authority"           { default = "https://login.microsoftonline.com/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" }
+variable "azure_audience"            { default = "api://11111111-2222-3333-4444-555555555555" }
+variable "azure_backend_scope"       { default = "api://11111111-2222-3333-4444-555555555555/user_impersonation" }
+
+# OpenAI / Speech (adjust regions to quota availability)
+variable "openai_service_name" { default = "az-openai-service" }
+variable "openai_location"     { default = "swedencentral" }
+variable "voice_location"      { default = "northeurope" }
+variable "openai_api_version"  { default = "2024-10-21" }
+variable "openai_sku"          { default = "S0" }
+variable "speech_sku"          { default = "S0" }
+variable "transcription_model" { default = "AZURE_AI_SPEECH" }
+
+# Retention settings (align across backend + functions + UI)
+variable "job_retention_days"          { default = 15 }
+variable "failed_job_retention_days"   { default = 14 }
+variable "blob_receipt_retention_days" { default = 15 }
+variable "retention_dry_run"           { default = false }
+variable "enable_automatic_retention"  { default = true }
+
+# Auth method (legacy/both/entra) – prefer entra for new deployments
+variable "auth_method" { default = "entra" }
+
+# Function concurrency
+variable "function_worker_process_count" { default = 4 }
+
+# Logging / monitoring
+variable "log_analytics_workspace_name" { default = "sbv2t-law" }
+variable "log_analytics_retention_days" { default = 30 }
+
+# Costing (set to non‑zero when modeling costs)
+variable "model_input_cost_per_million"  { default = 0 }
+variable "model_output_cost_per_million" { default = 0 }
+variable "speech_audio_cost_per_hour"    { default = 0 }
+
+# Misc branding
+variable "frontend_app_title"    { default = "OneWales Digital" }
+variable "frontend_app_subtitle" { default = "Sonic Brief" }
+
+# Alert toggles (emails supplied only if action group enabled)
+variable "enable_alerts"                     { default = true }
+variable "create_alert_action_group"         { default = false }
+variable "alert_emails"                      { default = ["alerts@example.org"] }
+variable "alert_window_minutes"              { default = 5 }
+variable "appservice_http5xx_threshold"      { default = 20 }
+variable "appservice_cpu_threshold"          { default = 85 }
+variable "function_failures_threshold"       { default = 10 }
+variable "cosmos_throttled_requests_threshold" { default = 100 }
+
+# Lite refactor (Tasks 1–3) backend env-driven configuration
+# These mirror runtime environment variables used by the FastAPI app.
+# If you wish to surface them via Terraform (optional), add matching
+# definitions in real variables.tf and reference in backend app_settings.
+variable "backend_log_level" { default = "INFO" }           # BACKEND_LOG_LEVEL (DEBUG/INFO/WARNING/ERROR/CRITICAL)
+variable "allow_origins" { default = "" }                  # ALLOW_ORIGINS (comma-separated; blank → localhost defaults)
+variable "enable_swagger_oauth" { default = false }         # ENABLE_SWAGGER_OAUTH (feature flag)
+variable "service_principal_upload_role" { default = "ndluploader" } # SERVICE_PRINCIPAL_UPLOAD_ROLE (service principal ingestion role)
+
+# Optional future hardening flags (add to real variables.tf when implemented)
+# variable "legacy_auth_enabled"   { default = false }
+# variable "enforce_scopes"        { default = false }
+# variable "retention_http_enabled" { default = false }
+
+# NOTE: Do NOT store secrets (keys, passwords) in Terraform variables committed to VCS.
+# Use Azure Key Vault or environment-specific secure injection for any future secrets.

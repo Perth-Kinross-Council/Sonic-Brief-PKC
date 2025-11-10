@@ -1,7 +1,7 @@
-import type { CategoryResponse } from "@/api/prompt-management";
 import type { SubcategoryFormValues } from "@/schema/prompt-management.schema";
 import { useEffect } from "react";
-import { createSubcategory } from "@/api/prompt-management";
+import { useCreateSubcategory } from "@/lib/api";
+import type { CategoryResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -21,15 +21,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useOptimisticMutation } from "@/hooks/use-optimistic-mutation";
-import { getPromptManagementSubcategoriesQuery } from "@/queries/prompt-management.query";
 import { subcategoryFormSchema } from "@/schema/prompt-management.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import { MarkdownEditor } from "./markdown-editor";
 
+// Accept both API CategoryResponse and local Category (which may include category_id)
+type CategoryLike = CategoryResponse & { category_id?: string };
+
 interface SubcategoryFormProps {
-  categories: Array<CategoryResponse>;
+  categories: Array<CategoryLike>;
   selectedCategoryId?: string;
   closeDialog: () => void;
 }
@@ -39,6 +41,10 @@ export function SubcategoryForm({
   selectedCategoryId,
   closeDialog,
 }: SubcategoryFormProps) {
+  // diagnostics removed
+
+  const createSubcategory = useCreateSubcategory();
+
   const form = useForm<SubcategoryFormValues>({
     resolver: zodResolver(subcategoryFormSchema),
     defaultValues: {
@@ -55,8 +61,9 @@ export function SubcategoryForm({
   }, [selectedCategoryId, form]);
 
   const { mutate: addSubcategoryMutation, isPending } = useOptimisticMutation({
-    mutationFn: createSubcategory,
-    queryKey: getPromptManagementSubcategoriesQuery().queryKey,
+    mutationFn: ({ name, categoryId, prompts }: { name: string; categoryId: string; prompts: Record<string, string> }) =>
+      createSubcategory(name, categoryId, prompts),
+    queryKey: ["sonic-brief", "prompt-management", "subcategories"],
     updateFn: (old = [], newData) => [...old, newData],
     successMessage: "Subcategory created successfully",
     onMutateSideEffect: () => {

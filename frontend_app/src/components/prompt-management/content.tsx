@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MDPreview from "@uiw/react-markdown-preview";
 import {
   AlertTriangle,
@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
+import { notifyError, notifySuccess } from '@/lib/notify';
 
 
 export function PromptManagementContent() {
@@ -43,7 +43,6 @@ export function PromptManagementContent() {
     error,
     setSelectedCategory,
     setSelectedSubcategory,
-    addSubcategory,
     editCategory,
     editSubcategory,
     removeCategory,
@@ -58,7 +57,6 @@ export function PromptManagementContent() {
   const [editCategoryName, setEditCategoryName] = useState("");
   const [editSubcategoryName, setEditSubcategoryName] = useState("");
   const [editPrompts, setEditPrompts] = useState<Record<string, string>>({});
-  const { toast } = useToast();
   const [isDeleteCategoryOpen, setIsDeleteCategoryOpen] = useState(false);
   const [isDeleteSubcategoryOpen, setIsDeleteSubcategoryOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
@@ -67,18 +65,37 @@ export function PromptManagementContent() {
   const [subcategoryToDelete, setSubcategoryToDelete] =
     useState<Subcategory | null>(null);
 
-  const toggleCategory = (categoryId: string) => {
-    console.log("Toggling category with ID:", categoryId);
+  // Ensure body scroll is restored after all dialogs close (workaround for lingering scroll lock)
+  const anyDialogOpen =
+    isAddSubcategoryOpen ||
+    isEditCategoryOpen ||
+    isEditSubcategoryOpen ||
+    isDeleteCategoryOpen ||
+    isDeleteSubcategoryOpen;
 
-    setExpandedCategories((prev) => {
-      if (prev.includes(categoryId)) {
-        console.log("Removing category from expanded list");
-        return prev.filter((id) => id !== categoryId);
-      } else {
-        console.log("Adding category to expanded list");
-        return [...prev, categoryId];
-      }
-    });
+  useEffect(() => {
+    if (!anyDialogOpen) {
+      // Defer to next frame so Radix unmount cleanup runs first
+      requestAnimationFrame(() => {
+        const body = document.body;
+        if (body.getAttribute("data-scroll-locked") !== null) {
+          body.removeAttribute("data-scroll-locked");
+        }
+        // Only reset if lingering
+        if (body.style.overflow === "hidden") {
+          body.style.overflow = ""; // allow default / stylesheet to apply
+        }
+        if (body.style.paddingRight) {
+          body.style.removeProperty("padding-right");
+        }
+      });
+    }
+  }, [anyDialogOpen]);
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories((prev) => prev.includes(categoryId)
+      ? prev.filter((id) => id !== categoryId)
+      : [...prev, categoryId]);
   };
 
   const handleCategoryClick = (category: Category) => {
@@ -95,116 +112,34 @@ export function PromptManagementContent() {
     setSelectedSubcategory(subcategory);
   };
 
-  const handleAddSubcategory = async (
-    name: string,
-    categoryId: string,
-    prompts: Record<string, string>,
-  ) => {
-    console.log("Adding subcategory with name:", name);
-    console.log("Category ID for new subcategory:", categoryId);
-    console.log("Prompts:", prompts);
-
-    if (!categoryId) {
-      console.error("Category ID is undefined");
-      toast({
-        title: "Error",
-        description: "Cannot add subcategory: missing category ID",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await addSubcategory(name, categoryId, prompts);
-      // Refresh the data after adding the subcategory
-      await refreshData();
-      toast({
-        title: "Success",
-        description: "Subcategory added successfully",
-      });
-      setIsAddSubcategoryOpen(false);
-    } catch (error) {
-      console.error("Error adding subcategory:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to create subcategory",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleEditCategory = async () => {
-    console.log(
-      "handleEditCategory called, isEditCategoryOpen:",
-      isEditCategoryOpen,
-    );
-    console.log("Current selectedCategory:", selectedCategory);
-    console.log("Current editCategoryName:", editCategoryName);
-
     if (!selectedCategory) {
-      console.error("No category selected for editing");
-      toast({
-        title: "Error",
-        description: "No category selected for editing",
-        variant: "destructive",
-      });
+  notifyError('No category selected for editing');
       return;
     }
 
     try {
-      // Use either category_id or id, whichever is available
       const categoryId = selectedCategory.category_id || selectedCategory.id;
-      console.log("Editing category with ID:", categoryId);
-      console.log("New name:", editCategoryName);
-
-      if (!categoryId) {
-        throw new Error("Category ID is undefined");
-      }
-
-      // Debug the API call params
-      console.log("About to call editCategory with:", {
-        categoryId,
-        name: editCategoryName,
-      });
+      if (!categoryId) throw new Error("Category ID is undefined");
 
       await editCategory(categoryId, editCategoryName);
-      console.log("Category updated successfully");
-
-      // Update the selected category with the new name
+      // Update local selectedCategory name
       setSelectedCategory({
         ...selectedCategory,
+        category_id: selectedCategory.category_id || categoryId,
         name: editCategoryName,
       });
 
-      toast({
-        title: "Success",
-        description: "Category updated successfully",
-      });
-
+  notifySuccess('Category updated successfully');
       setIsEditCategoryOpen(false);
-      console.log("Edit dialog closed after successful update");
-    } catch (error) {
-      console.error("Edit category error:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to update category",
-        variant: "destructive",
-      });
+  } catch (e) {
+  notifyError(e, 'Failed to update category');
     }
   };
 
   const handleEditSubcategory = async () => {
-    if (!selectedSubcategory) {
-      console.error("No subcategory selected for editing");
-      toast({
-        title: "Error",
-        description: "No subcategory selected for editing",
-        variant: "destructive",
-      });
+	if (!selectedSubcategory) {
+  notifyError('No subcategory selected for editing');
       return;
     }
 
@@ -214,31 +149,16 @@ export function PromptManagementContent() {
         throw new Error("Invalid subcategory ID");
       }
 
-      console.log("Updating subcategory:", {
-        id: subcategoryId,
-        name: editSubcategoryName,
-        prompts: editPrompts,
-      });
+  // Removed commented debug logging: updating subcategory details
 
       await editSubcategory(subcategoryId, editSubcategoryName, editPrompts);
       // Refresh the data after updating the subcategory
       await refreshData();
 
-      toast({
-        title: "Success",
-        description: "Subcategory updated successfully",
-      });
+  notifySuccess('Subcategory updated successfully');
       setIsEditSubcategoryOpen(false);
-    } catch (error) {
-      console.error("Error updating subcategory:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to update subcategory",
-        variant: "destructive",
-      });
+  } catch (e) {
+  notifyError(e, 'Failed to update subcategory');
     }
   };
 
@@ -249,38 +169,22 @@ export function PromptManagementContent() {
       const categoryId =
         categoryToDelete.category_id || categoryToDelete.id || "";
       await removeCategory(categoryId);
-      toast({
-        title: "Success",
-        description: "Category deleted successfully",
-      });
+  notifySuccess('Category deleted successfully');
       setIsDeleteCategoryOpen(false);
       setCategoryToDelete(null);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to delete category",
-        variant: "destructive",
-      });
+    } catch (e) {
+  notifyError(e, 'Failed to delete category');
     }
   };
 
   const handleDeleteSubcategory = async () => {
-    if (!subcategoryToDelete || !subcategoryToDelete.id) {
-      console.error(
-        "Invalid subcategory or missing subcategory ID:",
-        subcategoryToDelete,
-      );
-      toast({
-        title: "Error",
-        description: "Cannot delete subcategory: Invalid subcategory data",
-        variant: "destructive",
-      });
+	if (!subcategoryToDelete || !subcategoryToDelete.id) {
+  notifyError('Cannot delete subcategory: Invalid subcategory data');
       return;
     }
 
     try {
-      console.log("Attempting to delete subcategory:", subcategoryToDelete);
+      // Removed commented debug logging: attempting subcategory deletion
       await removeSubcategory(subcategoryToDelete.id);
       // Refresh the data after deleting the subcategory
       await refreshData();
@@ -290,25 +194,17 @@ export function PromptManagementContent() {
         setSelectedSubcategory(null);
       }
 
-      toast({
-        title: "Success",
-        description: "Subcategory deleted successfully",
-      });
+  notifySuccess('Subcategory deleted successfully');
       setIsDeleteSubcategoryOpen(false);
       setSubcategoryToDelete(null);
-    } catch (error) {
+  } catch (e) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to delete subcategory";
-      console.error("Error deleting subcategory:", error);
+    e instanceof Error ? e.message : "Failed to delete subcategory";
+  // Removed commented debug error logging for delete subcategory
 
       // Show more specific error messages
       if (errorMessage.includes("404")) {
-        toast({
-          title: "Error",
-          description:
-            "Subcategory not found. It may have been already deleted.",
-          variant: "destructive",
-        });
+        notifyError('Subcategory not found. It may have been already deleted.');
         // Close the dialog and clear the selection since the subcategory doesn't exist
         setIsDeleteSubcategoryOpen(false);
         setSubcategoryToDelete(null);
@@ -316,34 +212,21 @@ export function PromptManagementContent() {
           setSelectedSubcategory(null);
         }
       } else if (errorMessage.includes("401")) {
-        toast({
-          title: "Authentication Error",
-          description: "Your session has expired. Please log in again.",
-          variant: "destructive",
-        });
+        notifyError('Your session has expired. Please log in again.');
       } else {
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        notifyError(errorMessage);
       }
     }
   };
 
   const openEditCategory = (category: Category) => {
-    console.log("openEditCategory called with:", category);
+  // Removed commented debug logging: openEditCategory invoked
 
     // Check for either category_id or id property
     const categoryId = category.category_id || category.id;
 
-    if (!category || !categoryId) {
-      console.error("Invalid category data:", category);
-      toast({
-        title: "Error",
-        description: "Could not edit category: missing or invalid data",
-        variant: "destructive",
-      });
+	if (!category || !categoryId) {
+  notifyError('Could not edit category: missing or invalid data');
       return;
     }
 
@@ -358,34 +241,22 @@ export function PromptManagementContent() {
       setSelectedCategory(normalizedCategory);
       setEditCategoryName(category.name);
 
-      console.log("Category ID before opening dialog:", categoryId);
-      console.log("Category name before opening dialog:", category.name);
+  // Removed commented debug logging: category ID & name prior to dialog open
 
       // Then open the dialog with a small delay to ensure state is updated
-      setTimeout(() => {
-        console.log("Opening edit dialog now");
+    setTimeout(() => {
         setIsEditCategoryOpen(true);
       }, 10);
-    } catch (error) {
-      console.error("Error in openEditCategory:", error);
-      toast({
-        title: "Error",
-        description: "Something went wrong while trying to edit the category",
-        variant: "destructive",
-      });
+	} catch (e) {
+  notifyError(e, 'Something went wrong while trying to edit the category');
     }
   };
 
   const openEditSubcategory = (subcategory: Subcategory) => {
-    console.log("Opening edit dialog for subcategory:", subcategory);
+  // Removed commented debug logging: openEditSubcategory invoked
 
-    if (!subcategory || !subcategory.id) {
-      console.error("Invalid subcategory data:", subcategory);
-      toast({
-        title: "Error",
-        description: "Cannot edit subcategory: Invalid data",
-        variant: "destructive",
-      });
+	if (!subcategory || !subcategory.id) {
+  notifyError('Cannot edit subcategory: Invalid data');
       return;
     }
 
@@ -591,11 +462,11 @@ export function PromptManagementContent() {
                     onClick={(e) => {
                       // Make sure the event doesn't propagate up to parent elements
                       e.stopPropagation();
-                      console.log("Edit button clicked", selectedCategory);
+                      // Removed commented debug logging: edit button clicked
                       if (selectedCategory) {
                         openEditCategory(selectedCategory);
                       } else {
-                        console.error("No category selected for editing");
+                        // Removed commented debug error: no category selected
                       }
                     }}
                   >
@@ -679,235 +550,220 @@ export function PromptManagementContent() {
       </Card>
 
       {/* Add Subcategory Dialog */}
-      <Dialog
-        open={isAddSubcategoryOpen}
-        onOpenChange={(open) => {
-          console.log("Add subcategory dialog change:", open);
-          if (!open) {
-            // Only close the dialog here, don't open it
-            setIsAddSubcategoryOpen(false);
-          }
-        }}
-      >
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Subcategory</DialogTitle>
-          </DialogHeader>
-          {isAddSubcategoryOpen && (
+      {isAddSubcategoryOpen && (
+        <Dialog
+          open={isAddSubcategoryOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsAddSubcategoryOpen(false);
+            }
+          }}
+        >
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add New Subcategory</DialogTitle>
+            </DialogHeader>
             <SubcategoryForm
               key={`subcategory-form-${selectedCategory?.category_id || selectedCategory?.id || ""}`}
-              categories={categories}
+              categories={categories.map((c) => ({
+                id: (c as any).id ?? (c as any).category_id,
+                name: (c as any).name,
+                created_at: (c as any).created_at ?? new Date().toISOString(),
+                updated_at: (c as any).updated_at ?? new Date().toISOString(),
+                category_id: (c as any).category_id ?? (c as any).id,
+              }))}
               selectedCategoryId={
                 selectedCategory?.category_id || selectedCategory?.id || ""
               }
-              onSubmit={handleAddSubcategory}
-              onCancel={() => setIsAddSubcategoryOpen(false)}
+              closeDialog={() => setIsAddSubcategoryOpen(false)}
             />
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Edit Category Dialog */}
-      <Dialog
-        open={isEditCategoryOpen}
-        onOpenChange={(open) => {
-          console.log(
-            "Edit category dialog state changing to:",
-            open,
-            "current state:",
-            isEditCategoryOpen,
-          );
-          console.log(
-            "Selected category at dialog state change:",
-            selectedCategory,
-          );
-
-          // If the dialog is being closed
-          if (!open) {
-            setIsEditCategoryOpen(false);
-            console.log("Dialog closed by onOpenChange");
-          } else {
-            // If the dialog is being opened, verify we have the category with a valid ID
-            if (
-              selectedCategory &&
-              (selectedCategory.category_id || selectedCategory.id)
+      {isEditCategoryOpen && (
+        <Dialog
+          open={isEditCategoryOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsEditCategoryOpen(false);
+            } else if (
+              !(
+                selectedCategory &&
+                (selectedCategory.category_id || selectedCategory.id)
+              )
             ) {
-              setIsEditCategoryOpen(true);
-              console.log(
-                "Dialog opened by onOpenChange with category ID:",
-                selectedCategory.category_id || selectedCategory.id,
-              );
-            } else {
-              console.error(
-                "Trying to open category dialog but no valid category is selected:",
-                selectedCategory,
-              );
-              // Don't open the dialog if no category is selected
-              return false;
+              // Prevent opening without a valid selected category
+              setIsEditCategoryOpen(false);
             }
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div key="category-name-field" className="space-y-2">
-              <Label htmlFor="edit-category-name">Category Name</Label>
-              <Input
-                id="edit-category-name"
-                value={editCategoryName}
-                onChange={(e) => setEditCategoryName(e.target.value)}
-              />
-            </div>
-            {selectedCategory && (
-              <div
-                key="category-id-display"
-                className="text-muted-foreground text-xs"
-              >
-                Category ID:{" "}
-                {selectedCategory.category_id || selectedCategory.id}
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Category</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div key="category-name-field" className="space-y-2">
+                <Label htmlFor="edit-category-name">Category Name</Label>
+                <Input
+                  id="edit-category-name"
+                  value={editCategoryName}
+                  onChange={(e) => setEditCategoryName(e.target.value)}
+                />
               </div>
-            )}
-            <div key="action-buttons" className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsEditCategoryOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleEditCategory} disabled={loading}>
-                {loading ? "Saving..." : "Save Changes"}
-              </Button>
+              {selectedCategory && (
+                <div
+                  key="category-id-display"
+                  className="text-muted-foreground text-xs"
+                >
+                  Category ID:{" "}
+                  {selectedCategory.category_id || selectedCategory.id}
+                </div>
+              )}
+              <div key="action-buttons" className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditCategoryOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleEditCategory} disabled={loading}>
+                  {loading ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Edit Subcategory Dialog */}
-      <Dialog
-        open={isEditSubcategoryOpen}
-        onOpenChange={setIsEditSubcategoryOpen}
-      >
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Subcategory</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            <div key="subcategory-name-field" className="space-y-2">
-              <Label htmlFor="edit-subcategory-name">Subcategory Name</Label>
-              <Input
-                id="edit-subcategory-name"
-                value={editSubcategoryName}
-                onChange={(e) => setEditSubcategoryName(e.target.value)}
-              />
+      {isEditSubcategoryOpen && (
+        <Dialog
+          open={isEditSubcategoryOpen}
+          onOpenChange={setIsEditSubcategoryOpen}
+        >
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Subcategory</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div key="subcategory-name-field" className="space-y-2">
+                <Label htmlFor="edit-subcategory-name">Subcategory Name</Label>
+                <Input
+                  id="edit-subcategory-name"
+                  value={editSubcategoryName}
+                  onChange={(e) => setEditSubcategoryName(e.target.value)}
+                />
+              </div>
+              <div key="prompts-editor" className="space-y-2">
+                <Label>Prompts</Label>
+                <MarkdownEditor
+                  value={editPrompts}
+                  onChange={setEditPrompts}
+                />
+              </div>
+              <div key="action-buttons" className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditSubcategoryOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleEditSubcategory();
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
             </div>
-            <div key="prompts-editor" className="space-y-2">
-              <Label>Prompts</Label>
-              <MarkdownEditor
-                initialPrompts={editPrompts}
-                onSave={setEditPrompts}
-                onCancel={() => setIsEditSubcategoryOpen(false)}
-                hideActionButtons={true}
-              />
-            </div>
-            <div key="action-buttons" className="flex justify-end space-x-2">
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Category Confirmation Dialog */}
+      {isDeleteCategoryOpen && (
+        <Dialog
+          open={isDeleteCategoryOpen}
+          onOpenChange={setIsDeleteCategoryOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="text-destructive h-5 w-5" />
+                Delete Category
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete the category "
+                {categoryToDelete?.name}"? This will also delete all subcategories
+                and their prompts. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 variant="outline"
-                onClick={() => setIsEditSubcategoryOpen(false)}
+                onClick={() => {
+                  setIsDeleteCategoryOpen(false);
+                  setCategoryToDelete(null);
+                }}
               >
                 Cancel
               </Button>
               <Button
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleEditSubcategory();
-                }}
+                variant="destructive"
+                onClick={handleDeleteCategory}
                 disabled={loading}
               >
-                {loading ? "Saving..." : "Save Changes"}
+                {loading ? "Deleting..." : "Delete Category"}
               </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Category Confirmation Dialog */}
-      <Dialog
-        open={isDeleteCategoryOpen}
-        onOpenChange={setIsDeleteCategoryOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="text-destructive h-5 w-5" />
-              Delete Category
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the category "
-              {categoryToDelete?.name}"? This will also delete all subcategories
-              and their prompts. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsDeleteCategoryOpen(false);
-                setCategoryToDelete(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteCategory}
-              disabled={loading}
-            >
-              {loading ? "Deleting..." : "Delete Category"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Delete Subcategory Confirmation Dialog */}
-      <Dialog
-        open={isDeleteSubcategoryOpen}
-        onOpenChange={setIsDeleteSubcategoryOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="text-destructive h-5 w-5" />
-              Delete Subcategory
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the subcategory "
-              {subcategoryToDelete?.name}"? This will also delete all prompts
-              associated with this subcategory. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsDeleteSubcategoryOpen(false);
-                setSubcategoryToDelete(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteSubcategory}
-              disabled={loading}
-            >
-              {loading ? "Deleting..." : "Delete Subcategory"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {isDeleteSubcategoryOpen && (
+        <Dialog
+          open={isDeleteSubcategoryOpen}
+          onOpenChange={setIsDeleteSubcategoryOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="text-destructive h-5 w-5" />
+                Delete Subcategory
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete the subcategory "
+                {subcategoryToDelete?.name}"? This will also delete all prompts
+                associated with this subcategory. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteSubcategoryOpen(false);
+                  setSubcategoryToDelete(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteSubcategory}
+                disabled={loading}
+              >
+                {loading ? "Deleting..." : "Delete Subcategory"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

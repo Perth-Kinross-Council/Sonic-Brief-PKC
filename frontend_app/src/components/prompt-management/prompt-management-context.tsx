@@ -1,16 +1,14 @@
- 
-
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import type React from "react"
 import {
-  createCategory,
-  createSubcategory,
-  deleteCategory,
-  deleteSubcategory,
-  fetchCategories,
-  fetchSubcategories,
-  updateCategory,
-  updateSubcategory,
+  useCreateCategory,
+  useCreateSubcategory,
+  useDeleteCategory,
+  useDeleteSubcategory,
+  useFetchCategories,
+  useFetchSubcategories,
+  useUpdateCategory,
+  useUpdateSubcategory,
 } from "@/lib/api"
 
 export interface Category {
@@ -58,18 +56,33 @@ export function PromptManagementProvider({ children }: { children: React.ReactNo
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const fetchCategories = useFetchCategories();
+  const fetchSubcategories = useFetchSubcategories();
+  const createSubcategory = useCreateSubcategory();
+  const updateCategory = useUpdateCategory();
+  const updateSubcategory = useUpdateSubcategory();
+  const deleteCategory = useDeleteCategory();
+  const deleteSubcategory = useDeleteSubcategory();
+
   const refreshData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const categoriesData = await fetchCategories()
-      setCategories(categoriesData)
-
+      const categoriesData = await fetchCategories();
+      // Map API CategoryResponse -> local Category shape
+      const mapped = (categoriesData || []).map((cat: any) => ({
+        category_id: cat.id,
+        id: cat.id,
+        name: cat.name,
+        created_at: cat.created_at,
+        updated_at: cat.updated_at,
+      }));
+      setCategories(mapped)
       if (selectedCategory) {
-        const subcategoriesData = await fetchSubcategories(selectedCategory.category_id)
+        const subcategoriesData = await fetchSubcategories(selectedCategory.category_id);
         setSubcategories(subcategoriesData)
       } else {
-        const allSubcategories = await fetchSubcategories()
+        const allSubcategories = await fetchSubcategories();
         setSubcategories(allSubcategories)
       }
     } catch (err) {
@@ -78,29 +91,35 @@ export function PromptManagementProvider({ children }: { children: React.ReactNo
     } finally {
       setLoading(false)
     }
-  }, [selectedCategory])
+  }, [selectedCategory, fetchCategories, fetchSubcategories])
 
   useEffect(() => {
     refreshData()
   }, [refreshData])
 
-  const addCategory = useCallback(
-    async (name: string) => {
-      setLoading(true)
-      setError(null)
-      try {
-        await createCategory(name)
-        await refreshData()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred while creating category")
-        console.error("Error creating category:", err)
-        throw err
-      } finally {
-        setLoading(false)
+  const addCategoryRaw = useCreateCategory();
+  const addCategory = useCallback(async (name: string) => {
+    try {
+      const result = await addCategoryRaw(name);
+      if (!result || !result.id || !result.name) {
+        throw new Error("Category creation returned invalid data");
       }
-    },
-    [refreshData],
-  )
+      // Ensure the new category conforms to local Category shape
+      const newCategory = {
+        category_id: result.id,
+        id: result.id,
+        name: result.name,
+        created_at: result.created_at,
+        updated_at: result.updated_at,
+      };
+      setCategories((prev) => [...prev, newCategory]);
+      await refreshData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred while creating category");
+      console.error("Error creating category:", err);
+      throw err;
+    }
+  }, [addCategoryRaw, refreshData])
 
   const addSubcategory = useCallback(
     async (name: string, categoryId: string, prompts: Record<string, string>) => {
@@ -117,7 +136,7 @@ export function PromptManagementProvider({ children }: { children: React.ReactNo
         setLoading(false)
       }
     },
-    [refreshData],
+    [refreshData, createSubcategory],
   )
 
   const editCategory = useCallback(
@@ -135,7 +154,7 @@ export function PromptManagementProvider({ children }: { children: React.ReactNo
         setLoading(false)
       }
     },
-    [refreshData],
+    [refreshData, updateCategory],
   )
 
   const editSubcategory = useCallback(
@@ -153,7 +172,7 @@ export function PromptManagementProvider({ children }: { children: React.ReactNo
         setLoading(false)
       }
     },
-    [refreshData],
+    [refreshData, updateSubcategory],
   )
 
   const removeCategory = useCallback(
@@ -174,7 +193,7 @@ export function PromptManagementProvider({ children }: { children: React.ReactNo
         setLoading(false)
       }
     },
-    [refreshData, selectedCategory],
+    [refreshData, selectedCategory, deleteCategory],
   )
 
   const removeSubcategory = useCallback(
@@ -195,7 +214,7 @@ export function PromptManagementProvider({ children }: { children: React.ReactNo
         setLoading(false)
       }
     },
-    [refreshData, selectedSubcategory],
+    [refreshData, selectedSubcategory, deleteSubcategory],
   )
 
   return (

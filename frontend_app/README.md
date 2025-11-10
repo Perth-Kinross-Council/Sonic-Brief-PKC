@@ -303,3 +303,33 @@ Files prefixed with `demo` can be safely deleted. They are there to provide a st
 # Learn More
 
 You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+
+## PDF.js with Vite (pdfjs-dist)
+
+This app uses pdfjs-dist ESM build and worker for compatibility with Vite:
+
+- Import the ESM entry: `import * as pdfjsLib from "pdfjs-dist/build/pdf.mjs"`
+- Import the worker as a URL: `import pdfjsWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url"`
+- Set worker: `pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl`
+
+Avoid CommonJS paths like `build/pdf.js` or `build/pdf.worker.js` to prevent Rollup build errors.
+
+## API utilities and patterns
+
+Use these shared helpers for consistent API calls:
+
+- The `src/lib/apiConstants.ts` endpoints now use `apiUrl(...)` under the hood for consistency.
+
+Typical usage in hooks:
+
+```ts
+const token = await getToken();
+const url = apiUrl(`/admin/audit/logs?${qs.toString()}`);
+const data = await fetchJsonStrict(url, { headers: { Authorization: `Bearer ${token}` } });
+```
+
+Note: Keep binary responses (e.g., CSV exports) and mutations (POST/PUT/PATCH/DELETE) on raw `fetch` unless standardized separately.
+
+## Verification script (local CI)
+
+From the repo root, `npm run verify` executes: type-check, lint (with `--fix`), tests, and build for the frontend. Use this before pushing changes.

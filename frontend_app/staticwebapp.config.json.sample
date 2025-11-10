@@ -1,0 +1,29 @@
+{
+  "auth": {
+    "identityProviders": {
+      "azureActiveDirectory": {
+        "enabled": true,
+        "registration": {
+          "openIdIssuer": "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0",
+          "clientSecretSettingName": "IGNORED"
+        }
+      }
+    }
+  },
+  "routes": [
+    {
+      "route": "/login",
+      "allowedRoles": ["anonymous"],
+      "rewrite": "/index.html"
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/static/*",
+      "/images/*",
+      "/*.css",
+      "/*.js"
+    ]
+  }
+}

@@ -1,12 +1,11 @@
-import { useState } from "react";
+
+// --- BEGIN: SonicBrief-EID AuthForm exact copy ---
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
-
 import "@radix-ui/themes/styles.css";
-
 import type { LoginValues, RegisterValues } from "@/schema/auth.schema";
-import { loginUser, registerUser } from "@/api/auth";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -23,11 +22,32 @@ import { loginSchema, registerSchema } from "@/schema/auth.schema";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { userMessage } from '@/lib/errors';
+import { EntraAuth } from "@/components/auth/entra-auth";
+import { useLoginUser, useRegisterUser } from "@/lib/api";
+import { useEnhancedUnifiedAuth } from "@/lib/useEnhancedUnifiedAuth";
+import { authConfig } from "@/env";
+
 
 export function AuthForm() {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const router = useRouter();
+  const { isAuthenticated: authenticated, pending } = useEnhancedUnifiedAuth();
+  const [pathname, setPathname] = useState<string>(
+    typeof window !== "undefined" ? window.location.pathname : "",
+  );
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setPathname(window.location.pathname);
+    }
+    // Listen for route changes
+    const handlePopState = () => setPathname(window.location.pathname);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // All hooks must be called before any return
   const loginForm = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -45,6 +65,9 @@ export function AuthForm() {
     },
   });
 
+  const loginUser = useLoginUser();
+  const registerUser = useRegisterUser();
+
   const { mutateAsync: loginMutation, isPending: isLoginPending } = useMutation(
     {
       mutationKey: ["user/login"],
@@ -53,10 +76,12 @@ export function AuthForm() {
       onSuccess: (data) => {
         toast.success(data.message);
         setStorageItem("token", data.access_token);
-        router.navigate({ to: "/audio-upload" });
+  // Removed commented debug logging for legacy login success & token storage
+        window.dispatchEvent(new Event("auth-changed")); // Notify app of auth state change
+  router.navigate({ to: "/home" as any });
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Login failed");
+        toast.error(userMessage(error, 'Login failed'));
       },
     },
   );
@@ -75,9 +100,7 @@ export function AuthForm() {
         setActiveTab("login");
       },
       onError: (error) => {
-        toast.error(
-          error instanceof Error ? error.message : "Registration failed",
-        );
+        toast.error(userMessage(error, 'Registration failed'));
       },
     });
 
@@ -85,18 +108,45 @@ export function AuthForm() {
     await registerMutation(values);
   }
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Removed commented debug logging: AuthForm render state
+    }
+    if (!pending && authenticated && pathname !== "/home") {
+      // Removed commented debug logging: redirecting to /home
+      if (window.location.pathname !== "/home") {
+        router.navigate({ to: "/home" as any });
+      }
+    }
+  }, [authenticated, pending, router, pathname]);
+
+  // Debug: show unified and legacy states
+  if (typeof window !== "undefined") {
+    // Removed commented debug logging: AuthForm auth & token state snapshot
+  }
+
+  // Never show login form if authenticated (regardless of MSAL)
+  if (!pending && authenticated) {
+    return null; // Or a spinner, or just redirect
+  }
+
+  // Enhanced Debug: Log auth configuration with Azure-specific info (only when debug enabled)
+  // debugConfig.showAuthDebug() block removed: not present in your env.ts
+
   return (
     <div className="space-y-6">
-      <Tabs
-        className="w-full"
-        onValueChange={(value) => setActiveTab(value as "login" | "register")}
-        value={activeTab}
-      >
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="login">Login</TabsTrigger>
-          <TabsTrigger value="register">Register</TabsTrigger>
-        </TabsList>
-        <TabsContent value="login">
+      {/* Show legacy login/register forms only if legacy auth is enabled */}
+      {authConfig.isLegacyEnabled() && (
+        <Tabs
+          className="w-full"
+          onValueChange={(value) => setActiveTab(value as "login" | "register")}
+          value={activeTab}
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
+          </TabsList>
+          <TabsContent value="login">
           <Form {...loginForm}>
             <form
               onSubmit={loginForm.handleSubmit(onLoginSubmit)}
@@ -220,6 +270,14 @@ export function AuthForm() {
           </Form>
         </TabsContent>
       </Tabs>
+      )}
+      {/* Show separator and Entra Auth only when both methods are available */}
+      {authConfig.isLegacyEnabled() && authConfig.isEntraEnabled() && (
+        <div className="my-4 text-center text-xs text-muted-foreground">or</div>
+      )}
+      {/* Show Entra Auth if enabled */}
+      {authConfig.isEntraEnabled() && <EntraAuth />}
     </div>
   );
 }
+

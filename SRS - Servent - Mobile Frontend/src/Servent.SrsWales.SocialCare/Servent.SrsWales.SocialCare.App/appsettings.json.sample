@@ -1,0 +1,10 @@
+{
+    "SonicBrief": {
+        "ApiBaseUrl": "https://your-api-base-url.azurewebsites.net",
+        "EntraAppRegClientId": "your-entra-app-registration-client-id",
+        "EntraAppRegClientSecret": "your-entra-app-registration-client-secret",
+        "EntraTenantId": "your-entra-tenant-id",
+        "EntraScopes": "openid, profile, email, api://your-api-scope/access_as_user",
+        "DataRetentionDays": 14
+    }
+}

@@ -43,20 +43,23 @@ resource "azurerm_linux_web_app" "backend_webapp" {
   service_plan_id     = azurerm_service_plan.backend_appserviceplan.id
   https_only          = true
 
-  webdeploy_publish_basic_authentication_enabled = true
-  ftp_publish_basic_authentication_enabled       = true
+  webdeploy_publish_basic_authentication_enabled = false
+  ftp_publish_basic_authentication_enabled       = false
 
 
   site_config {
     minimum_tls_version = "1.2"
+    # Placeholder CORS (actual origins can be set post-deploy via CLI if enabled)
     cors {
-      allowed_origins = ["*"]
+      allowed_origins     = ["https://example.com"]
+      support_credentials = true
     }
     application_stack {
       python_version = "3.11"
     }
-    ftps_state       = "AllAllowed"
-    app_command_line = local.api_command_line
+  ftps_state       = "Disabled"
+  # Use Oryx build and ensure PYTHONPATH includes site packages
+  app_command_line = "bash -lc 'export PYTHONPATH=/home/site/wwwroot:/home/site/wwwroot/.python_packages/lib/site-packages; ${local.api_command_line}'"
   }
 
 
@@ -66,15 +69,30 @@ resource "azurerm_linux_web_app" "backend_webapp" {
     AZURE_COSMOS_DB                    = azurerm_cosmosdb_sql_database.voice_db.name
     AZURE_STORAGE_ACCOUNT_URL          = "https://${azurerm_storage_account.storage.name}.blob.core.windows.net"
     AZURE_STORAGE_RECORDINGS_CONTAINER = var.storage_container_name
+  AUTH_METHOD                        = var.auth_method
 
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 3000
     JWT_ALGORITHM                   = "HS256"
     JWT_SECRET_KEY                  = random_password.jwt_secret_key.result
 
+    # Entra ID / Azure AD Authentication
+    AZURE_TENANT_ID   = var.azure_tenant_id
+    ENTRA_CLIENT_ID   = var.azure_client_id
+    AZURE_AUTHORITY   = var.azure_authority
+    AZURE_AUDIENCE    = var.azure_audience
 
+  WEBSITE_WEBDEPLOY_USE_SCM      = true
+  SCM_DO_BUILD_DURING_DEPLOYMENT = true
+  PYTHONPATH                     = "/home/site/wwwroot:/home/site/wwwroot/.python_packages/lib/site-packages"
 
-    WEBSITE_WEBDEPLOY_USE_SCM      = true
-    SCM_DO_BUILD_DURING_DEPLOYMENT = true
+  # Lite refactor tasks 1-3
+  BACKEND_LOG_LEVEL     = var.backend_log_level
+  ALLOW_ORIGINS         = var.allow_origins
+  ENABLE_SWAGGER_OAUTH  = tostring(var.enable_swagger_oauth)
+  SERVICE_PRINCIPAL_UPLOAD_ROLE = var.service_principal_upload_role
+
+  # Optional: Backend Application Insights connection (if present)
+  # APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.backend_app_insights.connection_string
 
   }
 
@@ -85,13 +103,30 @@ resource "azurerm_linux_web_app" "backend_webapp" {
 
 }
 
+# Optional diagnostics for backend web app -> Log Analytics (enable if desired)
+# resource "azurerm_monitor_diagnostic_setting" "backend_webapp_diagnostics" {
+#   name                       = "${local.name_prefix}-backend-diag"
+#   target_resource_id         = azurerm_linux_web_app.backend_webapp.id
+#   log_analytics_workspace_id = azurerm_log_analytics_workspace.log_analytics_workspace.id
+#
+#   enabled_log {
+#     category = "AppServiceHTTPLogs"
+#   }
+#
+#   enabled_log {
+#     category = "AppServiceConsoleLogs"
+#   }
+# }
+
 resource "time_sleep" "wait_before_start_backend" {
   depends_on      = [data.archive_file.python_backend_webapp_package]
-  create_duration = "360s" # Adjust the time as needed
+  create_duration = "600s" # Adjust the time as needed
 }
 
 resource "null_resource" "publish_backend_app_zip" {
-  #triggers = {always_run = "${timestamp()}"}
+  triggers = {
+    package_hash = filesha256(data.archive_file.python_backend_webapp_package.output_path)
+  }
   provisioner "local-exec" {
     command = "az webapp deploy --subscription ${var.subscription_id} --resource-group ${azurerm_linux_web_app.backend_webapp.resource_group_name} --name ${azurerm_linux_web_app.backend_webapp.name} --src-path ${data.archive_file.python_backend_webapp_package.output_path} --type zip"
   }

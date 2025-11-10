@@ -1,14 +1,15 @@
 import os
 import logging
 from dotenv import load_dotenv
-import ast
 
 # Load environment variables
 load_dotenv()
 
-# Setup logging
+# Setup logging with env-driven level (default INFO)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+_func_level_name = os.getenv("FUNCTIONS_LOG_LEVEL", "INFO").upper()
+_func_level = getattr(logging, _func_level_name, logging.INFO)
+logger.setLevel(_func_level)
 
 
 def get_required_env_var(var_name: str) -> str:
@@ -27,9 +28,20 @@ class AppConfig:
 
             # Cosmos DB settings
             self.cosmos_endpoint: str = get_required_env_var("AZURE_COSMOS_ENDPOINT")
-            self.cosmos_database: str = os.getenv("AZURE_COSMOS_DB_NAME", "VoiceDB")
+            self.cosmos_database: str = os.getenv("AZURE_COSMOS_DB_NAME") or os.getenv("AZURE_COSMOS_DB", "VoiceDB")
             self.cosmos_jobs_container: str = f"{prefix}jobs"
             self.cosmos_prompts_container: str = f"{prefix}prompts"
+
+            # Audit Container Configuration
+            self.audit_logs_container: str = "audit_logs"
+            self.job_activity_logs_container: str = "job_activity_logs"
+            self.blob_lifecycle_logs_container: str = "blob_lifecycle_logs"
+            self.system_metrics_container: str = "system_metrics"
+            self.usage_analytics_container: str = "usage_analytics"
+
+            # Audit settings
+            self.enable_detailed_audit: bool = os.getenv("ENABLE_DETAILED_AUDIT", "true").lower() == "true"
+            self.compliance_mode: bool = os.getenv("COMPLIANCE_MODE", "true").lower() == "true"
 
             # Supported Audio Extensions List
             self.supported_audio_extensions = {
@@ -71,6 +83,20 @@ class AppConfig:
             self.speech_candidate_locales: str = os.getenv(
                 "AZURE_SPEECH_CANDIDATE_LOCALES"
             )
+
+            # Pricing / Costing (per million tokens or per hour) - optional, default 0 so it won't break existing envs
+            try:
+                self.model_input_cost_per_million: float = float(os.getenv("MODEL_INPUT_COST_PER_MILLION", "0") or 0)
+            except ValueError:
+                self.model_input_cost_per_million = 0.0
+            try:
+                self.model_output_cost_per_million: float = float(os.getenv("MODEL_OUTPUT_COST_PER_MILLION", "0") or 0)
+            except ValueError:
+                self.model_output_cost_per_million = 0.0
+            try:
+                self.speech_audio_cost_per_hour: float = float(os.getenv("SPEECH_AUDIO_COST_PER_HOUR", "0") or 0)
+            except ValueError:
+                self.speech_audio_cost_per_hour = 0.0
 
             logger.debug("AppConfig initialization completed successfully")
         except Exception as e:

@@ -1,9 +1,9 @@
 from typing import Dict, Any
-import requests
 import logging
+import os
 from config import AppConfig
 from openai import AzureOpenAI
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from azure.identity import ManagedIdentityCredential, get_bearer_token_provider
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 class AnalysisService:
     def __init__(self, config: AppConfig):
         self.config = config
-        self.credential = DefaultAzureCredential()
+        # Use ManagedIdentityCredential for Azure Functions
+        client_id = os.getenv("AZURE_CLIENT_ID")
+        if client_id:
+            self.credential = ManagedIdentityCredential(client_id=client_id)
+        else:
+            self.credential = ManagedIdentityCredential()
 
     def analyze_conversation(self, conversation: str, context: str) -> Dict[str, Any]:
         """

@@ -1,0 +1,68 @@
+﻿@import "tailwindcss";
+@import "./markdown.css";
+
+:root {
+    --rz-icon-fill: 1;
+    --rz-icon-grade: 0;
+    --rz-icon-optical-size: 48;
+    --rz-slider-handle-background-color: var(--rz-primary);
+    --rz-slider-handle-border: var(--rz-primary);
+    --rz-slider-background-color: #dbe0e6;
+    --rz-slider-range-background-color: var(--rz-primary);
+}
+
+.record-pulse:before {
+    content: '';
+    position: absolute;
+    left: 75%;
+    top: 75%;
+    display: inline-block;
+    width: 150%;
+    height: 150%;
+    box-sizing: border-box;
+    margin-left: -100%;
+    margin-top: -100%;
+    border-radius: 999px;
+    background-color: #f31155;
+    animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.rz-button-box {
+    position: relative;
+}
+
+.rz-notification {
+    position: fixed !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    bottom: 64px !important;
+    right: 0 !important;
+    left: 0 !important;
+    top: unset !important;
+}
+
+.rz-notification-item-wrapper {
+    width: 97% !important;
+}
+
+.rz-slider-horizontal {
+    width: 100% !important;
+    height: 0.25rem !important;
+}
+
+.rz-badge {
+    font-size: 0.625rem !important;
+    line-height: 0.75rem !important;
+}
+
+@keyframes pulse-ring {
+    0% {
+        transform: scale(.33);
+    }
+
+    80%, 100% {
+        opacity: 0;
+    }
+}

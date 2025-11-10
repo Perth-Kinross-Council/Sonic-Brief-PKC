@@ -1,5 +1,5 @@
-import type { SubcategoryResponse } from "@/api/prompt-management";
-import { deleteSubcategory } from "@/api/prompt-management";
+import type { SubcategoryResponse } from "@/lib/api";
+import { useDeleteSubcategory } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useOptimisticMutation } from "@/hooks/use-optimistic-mutation";
-import { getPromptManagementSubcategoriesQuery } from "@/queries/prompt-management.query";
 import { AlertTriangle } from "lucide-react";
 
 interface DeleteSubcategoryDialogProps {
@@ -24,12 +23,17 @@ export function DeleteSubcategoryDialog({
   onOpenChange,
   subcategory,
 }: DeleteSubcategoryDialogProps) {
+  const deleteSubcategory = useDeleteSubcategory();
+  
   const { mutate: removeSubcategoryMutation, isPending } =
     useOptimisticMutation({
-      mutationFn: deleteSubcategory,
-      queryKey: getPromptManagementSubcategoriesQuery().queryKey,
-      updateFn: (old = [], subcategoryId) =>
-        old.filter((sub) => sub.id !== subcategoryId),
+      mutationFn: async (subcategoryId: string) => {
+        await deleteSubcategory(subcategoryId);
+        return { id: subcategoryId } as SubcategoryResponse; // Return minimal object for typing
+      },
+      queryKey: ["sonic-brief", "prompt-management", "subcategories"],
+      updateFn: (old: SubcategoryResponse[] = [], subcategoryId: string) =>
+        old.filter((sub: SubcategoryResponse) => sub.id !== subcategoryId),
       successMessage: "Subcategory deleted successfully",
       onMutateSideEffect: () => {
         onOpenChange(false);

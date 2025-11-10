@@ -1,0 +1,19 @@
+{
+	"name": "sonic-brief",
+	"private": true,
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"build": "npm --prefix frontend_app run build",
+		"dev": "npm --prefix frontend_app run dev",
+		"serve": "npm --prefix frontend_app run serve",
+		"test": "npm --prefix frontend_app run test",
+		"type-check": "npm --prefix frontend_app run type-check",
+		"lint": "npm --prefix frontend_app run lint",
+		"format": "npm --prefix frontend_app run format",
+		"format:fix": "npm --prefix frontend_app run format:fix",
+		"verify": "npm --prefix frontend_app run type-check && npm --prefix frontend_app run lint --fix && npm --prefix frontend_app run test && npm --prefix frontend_app run build",
+		"verify:ci": "npm --prefix frontend_app run type-check && npm --prefix frontend_app run format:check && npm --prefix frontend_app run lint && npm --prefix frontend_app run test && npm --prefix frontend_app run build"
+	}
+}

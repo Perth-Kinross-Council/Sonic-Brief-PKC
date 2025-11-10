@@ -1,45 +1,32 @@
- 
+
 
 import { useState } from "react"
-import { PlusCircle } from "lucide-react"
+import { PlusCircle, FileText } from "lucide-react"
 import { usePromptManagement } from "./prompt-management-context"
 import { Button } from "@/components/ui/button"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage } from "@/components/ui/breadcrumb"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useToast } from "@/components/ui/use-toast"
+import { notifyError, notifySuccess } from '@/lib/notify'
 
 export function PromptManagementHeader() {
   const { addCategory, loading } = usePromptManagement()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [categoryName, setCategoryName] = useState("")
-  const { toast } = useToast()
 
   const handleAddCategory = async () => {
     if (!categoryName.trim()) {
-      toast({
-        title: "Error",
-        description: "Category name cannot be empty",
-        variant: "destructive",
-      })
+      notifyError('Category name cannot be empty')
       return
     }
 
     try {
-      await addCategory(categoryName)
-      toast({
-        title: "Success",
-        description: "Category created successfully",
-      })
+  await addCategory(categoryName)
+  notifySuccess('Category created successfully')
       setCategoryName("")
       setIsDialogOpen(false)
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create category",
-        variant: "destructive",
-      })
+  notifyError(error, 'Failed to create category')
     }
   }
 
@@ -47,16 +34,21 @@ export function PromptManagementHeader() {
     <>
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className="text-2xl font-semibold tracking-tight">Prompt Management</h2>
-          <Breadcrumb>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbItem>
-              <BreadcrumbPage>Prompt Management</BreadcrumbPage>
-            </BreadcrumbItem>
-          </Breadcrumb>
-          <p className="text-sm text-muted-foreground">
+          <nav
+            className="flex items-center text-sm text-muted-foreground mb-1"
+            aria-label="Breadcrumb"
+          >
+            <a href="/home" className="hover:underline">
+              Home
+            </a>
+            <span className="mx-2">&gt;</span>
+            <span className="font-semibold">Prompt Management</span>
+          </nav>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            <FileText className="h-5 w-5" />
+            Prompt Management
+          </h2>
+          <p className="text-muted-foreground text-sm">
             Manage categories, subcategories, and prompts for your AI system.
           </p>
         </div>

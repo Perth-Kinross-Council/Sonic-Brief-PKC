@@ -1,0 +1,177 @@
+﻿@page "/settings"
+@using Servent.SrsWales.SocialCare.App.Services
+@using Servent.SrsWales.SocialCare.App.Services.SonicBrief
+
+@inject UserService AuthService
+@inject MsalAuthenticationService AuthenticationStateProvider
+@inject SonicBriefService SonicBriefService
+@inject StorageService StorageService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<div class="flex flex-col gap-5 p-5">
+
+	<div class="flex justify-between gap-2 items-center">
+		<div class="text-lg font-medium">
+			Settings
+		</div>
+	</div>
+
+	<div class="h-px px-5 bg-gray-200 w-full"></div>
+
+	@if (IsLoading)
+	{
+		<div class="flex justify-center items-center mt-12">
+			<RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Dark" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+		</div>
+	}
+	else
+	{
+		<div>
+			<div class="font-medium mb-5">User</div>
+
+			@if (IsLoggedIn)
+			{
+				<div class="flex text-sm justify-between items-center gap-3">
+					<div>
+						You are logged in as <b>@Email</b>
+					</div>
+
+					<div>
+						<RadzenButton Click=@Logout Text="Logout" ButtonStyle="ButtonStyle.Danger" class="!rounded-full" />
+					</div>
+				</div>
+			}
+			else
+			{
+				<div class="flex text-sm justify-between items-center gap-3">
+					<div class="flex flex-col gap-1">
+						<div>You are not logged in and will be unable to upload whilst logged out.</div>
+						@if (!string.IsNullOrWhiteSpace(Email))
+						{
+							<div class="text-xs">Last logged in as: @Email</div>
+						}
+					</div>
+
+					<div>
+						<RadzenButton Click=@Login Text="Login" ButtonStyle="ButtonStyle.Primary" class="!rounded-full" />
+					</div>
+				</div>
+			}
+
+		</div>
+
+		<div class="h-px px-5 bg-gray-200 w-full"></div>
+
+		<div>
+			<div class="font-medium mb-5">Data</div>
+
+			<div class="flex flex-col gap-4">
+				<div>
+					<div class="flex text-sm justify-between items-center gap-3">
+						<div>
+							Refresh Service Areas and Service Functions
+						</div>
+
+						<div>
+							<RadzenButton Click=@SyncCategories Text="Sync" ButtonStyle="ButtonStyle.Primary" class="!rounded-full" Disabled="!IsLoggedIn || NetworkAccess != NetworkAccess.Internet" />
+						</div>
+					</div>
+
+					@if (NetworkAccess != NetworkAccess.Internet)
+					{
+						<div class="text-red-600 mt-2 text-xs">
+							You are not connected to the Internet. Please connect to the Internet to sync Service Areas and Service Functions.
+						</div>
+					}
+
+					@if (!IsLoggedIn)
+					{
+						<div class="text-red-600 mt-2 text-xs">
+							You must be logged in to sync Service Areas and Service Functions.
+						</div>
+					}
+				</div>
+
+				<div class="flex text-sm justify-between items-center gap-3">
+					<div>
+						Delete all recordings
+					</div>
+
+					<div>
+						<RadzenButton Click=@RemoveAllRecordings Text="Delete" ButtonStyle="ButtonStyle.Danger" class="!rounded-full" />
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+</div>
+
+@code {
+	private bool IsLoading { get; set; } = false;
+	private bool IsLoggedIn { get; set; } = false;
+	private NetworkAccess NetworkAccess { get; set; }
+	private string? Email { get; set; } = null;
+
+
+	protected override async Task OnInitializedAsync()
+	{
+		NetworkAccess = Connectivity.NetworkAccess;
+		Connectivity.ConnectivityChanged += (object? sender, ConnectivityChangedEventArgs e) =>
+		{
+			NetworkAccess = e.NetworkAccess;
+			StateHasChanged();
+		};
+
+		await GetInitialData();
+
+		await base.OnInitializedAsync();
+	}
+
+	private async Task GetInitialData()
+	{
+		IsLoading = true;
+		StateHasChanged();
+
+		IsLoggedIn = await AuthService.IsLoggedIn();
+		Email = await AuthService.GetEmail();
+
+		IsLoading = false;
+		StateHasChanged();
+	}
+
+	private async Task Login()
+	{
+		await AuthenticationStateProvider.SignInInteractively(CancellationToken.None);
+		await GetInitialData();
+		StateHasChanged();
+	}
+
+	private async Task Logout()
+	{
+		await AuthenticationStateProvider.LogoutAsync(CancellationToken.None);
+		await GetInitialData();
+		StateHasChanged();
+	}
+
+	private async Task SyncCategories()
+	{
+		_ = await SonicBriefService.GetCategoriesAsync();
+		NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Refresh data complete" });
+		StateHasChanged();
+	}
+
+	private async Task RemoveAllRecordings()
+	{
+		var hasBeenConfirmed = await DialogService.Confirm("Are you sure you want to delete all recordings?", "Delete recordings", new ConfirmOptions() { OkButtonText = "Yes", CancelButtonText = "No" });
+		if (hasBeenConfirmed != true)
+		{
+			return;
+		}
+
+		await StorageService.RemoveAllRecordings();
+		NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "All recordings have been deleted" });
+
+		StateHasChanged();
+	}
+}

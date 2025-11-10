@@ -1,5 +1,5 @@
-import type { CategoryResponse } from "@/api/prompt-management";
-import { deleteCategory } from "@/api/prompt-management";
+import type { CategoryResponse } from "@/lib/api";
+import { useDeleteCategory } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useOptimisticMutation } from "@/hooks/use-optimistic-mutation";
-import { getPromptManagementCategoriesQuery } from "@/queries/prompt-management.query";
 import { AlertTriangle } from "lucide-react";
 
 interface DeleteCategoryDialogProps {
@@ -24,11 +23,16 @@ export function DeleteCategoryDialog({
   onOpenChange,
   category,
 }: DeleteCategoryDialogProps) {
+  const deleteCategory = useDeleteCategory();
+  
   const { mutate: removeCategoryMutation, isPending } = useOptimisticMutation({
-    mutationFn: deleteCategory,
-    queryKey: getPromptManagementCategoriesQuery().queryKey,
-    updateFn: (old = [], categoryId) =>
-      old.filter((cat) => cat.id !== categoryId),
+    mutationFn: async (categoryId: string) => {
+      await deleteCategory(categoryId);
+      return { id: categoryId, name: '', created_at: '', updated_at: '' } as CategoryResponse;
+    },
+    queryKey: ["sonic-brief", "prompt-management", "categories"],
+    updateFn: (old: CategoryResponse[] = [], categoryId: string) =>
+      old.filter((cat: CategoryResponse) => cat.id !== categoryId),
     successMessage: "Category deleted successfully",
     onMutateSideEffect: () => {
       onOpenChange(false);

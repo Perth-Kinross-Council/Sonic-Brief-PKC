@@ -1,3 +1,4 @@
+import { EntraAuth } from "./auth/entra-auth";
 import { useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -11,44 +12,33 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { notifySuccess, notifyError } from '@/lib/notify';
 
 export function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-
       if (response.ok) {
         const data = await response.json();
-        // Store the token in localStorage or a secure cookie
         localStorage.setItem("token", data.token);
-        toast({
-          title: "Login Successful",
-          description: "You have been successfully logged in.",
-        });
-        router.navigate({ to: "/" }); // Redirect to dashboard
+        notifySuccess('Login Successful', { description: 'You have been successfully logged in.' });
+        router.navigate({ to: "/" });
       } else {
         throw new Error("Login failed");
       }
     } catch (error) {
-      toast({
-        title: "Login Failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
-      });
+      notifyError(error, 'Please check your credentials and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -59,7 +49,7 @@ export function LoginForm() {
       <CardHeader>
         <CardTitle>Login</CardTitle>
         <CardDescription>
-          Enter your credentials to access the dashboard.
+          Choose a login method to access the dashboard.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -86,13 +76,17 @@ export function LoginForm() {
                 required
               />
             </div>
+            <Button type="submit" disabled={isLoading} className="mt-2 w-full">
+              {isLoading ? "Logging in..." : "Login with Username/Password"}
+            </Button>
           </div>
         </form>
+        <div className="my-4 text-center text-xs text-muted-foreground">or</div>
+        <EntraAuth />
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Button variant="outline">Cancel</Button>
-        <Button onClick={handleSubmit} disabled={isLoading}>
-          {isLoading ? "Logging in..." : "Login"}
+        <Button variant="outline" onClick={() => router.navigate({ to: "/" })}>
+          Cancel
         </Button>
       </CardFooter>
     </Card>

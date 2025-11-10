@@ -1,0 +1,56 @@
+# ASP.NET
+# Build and test ASP.NET projects.
+# Add steps that publish symbols, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
+
+trigger: none
+
+pool:
+    vmImage: "windows-2025"
+
+steps:
+    - task: DownloadSecureFile@1
+      name: keystore
+      displayName: Download keystore
+      inputs:
+          secureFile: "$(AndroidSigningKeyStoreFileName)"
+
+    - script: |
+          echo Downloaded $(keystore.secureFilePath)
+          echo Working Directory $(System.DefaultWorkingDirectory)\$(AndroidSigningKeyStoreFileName)
+          mv $(keystore.secureFilePath) $(System.DefaultWorkingDirectory)
+      displayName: Move Keystore to Working Directory
+
+    - task: JavaToolInstaller@0
+      inputs:
+          versionSpec: "21"
+          jdkArchitectureOption: "x64"
+          jdkSourceOption: "PreInstalled"
+
+    - task: DotNetCoreCLI@2
+      displayName: "Build the Android Binaries"
+      inputs:
+          command: "publish"
+          publishWebProjects: false
+          projects: "**/*.App.csproj"
+          arguments: '-f:net9.0-android -c:Release /p:ArchiveOnBuild=true /p:EnableAssemblyILStripping=false /p:AndroidSigningKeyPass=$(AndroidSigningKeyPass) /p:AndroidSigningStorePass=$(AndroidSigningStorePass) /p:AndroidSigningKeyStore=$(System.DefaultWorkingDirectory)\$(AndroidSigningKeyStoreFileName) /p:AndroidSigningKeyAlias=$(AndroidSigningKeyAlias) /p:AndroidKeyStore=true'
+          zipAfterPublish: false
+
+    - task: CopyFiles@2
+      displayName: "Copy file from Build to Staging"
+      inputs:
+          SourceFolder: "$(Agent.BuildDirectory)"
+          Contents: |
+              **/*-Signed.aab
+              **/*-Signed.apk
+          TargetFolder: "$(Build.ArtifactStagingDirectory)"
+          CleanTargetFolder: true
+          OverWrite: true
+          flattenFolders: true
+
+    - task: PublishBuildArtifacts@1
+      displayName: "Publish the Staging Files."
+      inputs:
+          PathtoPublish: "$(Build.ArtifactStagingDirectory)"
+          ArtifactName: "drop"
+          publishLocation: "Container"

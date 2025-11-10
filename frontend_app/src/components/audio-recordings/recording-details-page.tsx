@@ -1,4 +1,5 @@
-import type { AudioRecording } from "@/api/audio-recordings";
+import { useUnifiedAccessToken, useFetchJobTranscription, type AudioRecording } from "@/lib/api";
+import { TRANSCRIPTION_API, JOBS_API } from "@/lib/apiConstants";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -14,8 +15,9 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { cn } from "@/lib/utils";
-import { getAudioTranscriptionQuery } from "@/queries/audio-recordings.query";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useGetUserProfile } from "@/lib/enhancedApi";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -57,9 +59,17 @@ const statusStyles: Record<string, string> = {
 };
 
 export function RecordingDetailsPage({ recording }: RecordingDetailsPageProps) {
-  const { data: transcriptionText, refetch: refetchTranscription } = useQuery(
-    getAudioTranscriptionQuery(recording.id),
-  );
+  const fetchTranscription = useFetchJobTranscription();
+  const getToken = useUnifiedAccessToken();
+  const getUserProfile = useGetUserProfile();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [roleLoaded, setRoleLoaded] = useState(false);
+  
+  const { data: transcriptionText, refetch: refetchTranscription } = useQuery({
+    queryKey: ["sonic-brief", "audio-recordings", "transcription", recording.id],
+    queryFn: () => fetchTranscription(recording.id),
+    enabled: !!recording.id,
+  });
 
   const {
     audioRef,
@@ -75,6 +85,26 @@ export function RecordingDetailsPage({ recording }: RecordingDetailsPageProps) {
     formattedCurrentTime,
     formattedDuration,
   } = useAudioPlayer(recording.file_path);
+
+  // Load user role for conditional download controls
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const profile = await getUserProfile();
+        if (!mounted) return;
+        setUserRole(profile?.role || null);
+      } catch {
+        if (!mounted) return;
+        setUserRole(null);
+      } finally {
+        if (mounted) setRoleLoaded(true);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="relative container mx-auto px-4 py-6">
@@ -174,7 +204,22 @@ export function RecordingDetailsPage({ recording }: RecordingDetailsPageProps) {
                 <div className="flex justify-center">
                   <Button
                     className="w-full sm:w-auto"
-                    onClick={() => window.open(recording.file_path, "_blank")}
+                    disabled={!(roleLoaded && (userRole === "admin" || userRole === "power_user"))}
+                    onClick={async () => {
+                      try {
+                        const token = await getToken();
+                        const resp = await fetch(`${JOBS_API}?job_id=${encodeURIComponent(recording.id)}&download=true&download_resource=audio`, {
+                          headers: { Authorization: `Bearer ${token}` }
+                        });
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const data = await resp.json();
+                        const job = (data?.jobs || [])[0];
+                        const url = job?.file_path;
+                        if (url) window.open(url, "_blank");
+                      } catch (e) {
+                        console.error('Failed to audit/open audio', e);
+                      }
+                    }}
                   >
                     <Download className="mr-2 h-4 w-4" />
                     Download Audio
@@ -319,13 +364,27 @@ export function RecordingDetailsPage({ recording }: RecordingDetailsPageProps) {
                   {recording.transcription_file_path && (
                     <div className="flex justify-center">
                       <Button
-                        onClick={() =>
-                          recording.transcription_file_path &&
-                          window.open(
-                            recording.transcription_file_path,
-                            "_blank",
-                          )
-                        }
+                        onClick={async () => {
+                          if (!recording.id) return;
+                          try {
+                            const token = await getToken();
+                            const resp = await fetch(`${TRANSCRIPTION_API}/${recording.id}?download=true`, {
+                              headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                            const blob = await resp.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `transcription-${recording.id}.txt`;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            URL.revokeObjectURL(url);
+                          } catch (e) {
+                            console.error('Failed to download transcript', e);
+                          }
+                        }}
                         variant="outline"
                         className="w-full max-w-md rounded-lg font-semibold shadow-md"
                         disabled={!recording.transcription_file_path}
@@ -377,10 +436,21 @@ export function RecordingDetailsPage({ recording }: RecordingDetailsPageProps) {
                           })}
                       </div>
                       <Button
-                        onClick={() =>
-                          recording.analysis_file_path &&
-                          window.open(recording.analysis_file_path, "_blank")
-                        }
+                        onClick={async () => {
+                          try {
+                            const token = await getToken();
+                            const resp = await fetch(`${JOBS_API}?job_id=${encodeURIComponent(recording.id)}&download=true&download_resource=analysis`, {
+                              headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                            const data = await resp.json();
+                            const job = (data?.jobs || [])[0];
+                            const url = job?.analysis_file_path;
+                            if (url) window.open(url, "_blank");
+                          } catch (e) {
+                            console.error('Failed to audit/open analysis', e);
+                          }
+                        }}
                         variant="outline"
                         className="mt-2 w-full rounded-lg font-semibold shadow-md"
                         disabled={!recording.analysis_file_path}

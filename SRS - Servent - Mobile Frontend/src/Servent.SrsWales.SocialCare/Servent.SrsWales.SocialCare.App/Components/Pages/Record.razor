@@ -1,0 +1,400 @@
+﻿@page "/"
+
+@using Microsoft.Maui.Dispatching;
+@using Plugin.Maui.Audio
+@using Servent.SrsWales.SocialCare.App.Data.Forms
+@using Servent.SrsWales.SocialCare.App.Services
+@using Servent.SrsWales.SocialCare.App.Data
+@using System.ComponentModel.DataAnnotations;
+@using System.Diagnostics
+@using Servent.SrsWales.SocialCare.App.Services.SonicBrief
+@using Servent.SrsWales.SocialCare.App.Services.SonicBrief.Models
+
+@inject IAudioRecordingService AudioRecordingService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject SonicBriefService SonicBriefService
+@inject UserService AuthService
+@inject NavigationManager NavigationManager
+@inject RecordForm Form
+@inject RecordPageState RecordPageState
+@inject StorageService StorageService
+@inject MsalAuthenticationService AuthenticationStateProvider
+@inject IConnectivity Connectivity
+@inject IServiceProvider ServiceProvider
+
+<ConnectivityCheckHeader />
+
+<div class="p-5 flex flex-col gap-6">
+	@if (!IsLoading && AllCategories.Count == 0 && !IsLoggedIn)
+	{
+		<div class="flex p-5 bg-red-600 text-white text-sm rounded-lg justify-between gap-2">
+			<div>
+				No Service Areas found. Please login to retrieve the Service Areas.
+			</div>
+
+			<div>
+				<RadzenButton Click=@Login Text="Login" ButtonStyle="ButtonStyle.Light" class="!rounded-full" />
+			</div>
+		</div>
+	}
+	else if (!IsLoading && AllCategories.Count == 0 && IsLoggedIn)
+	{
+		<div class="flex flex-col gap-1 p-5 bg-red-600 text-white text-sm rounded-lg">
+			No Service Areas found. Please ensure the device is connected to the Internet and re-open the App to update the Service Areas list.
+		</div>
+	}
+	else if (!IsLoading && AllCategories.Count > 0 && !IsLoggedIn && !string.IsNullOrWhiteSpace(Email))
+	{
+		<div class="flex p-5 bg-gray-600 text-white text-sm rounded-lg justify-between gap-2">
+			<div>
+				You are not logged in and will be unable to upload whilst logged out.
+			</div>
+
+			<div>
+				<RadzenButton Click=@Login Text="Login" ButtonStyle="ButtonStyle.Light" class="!rounded-full" />
+			</div>
+		</div>
+	}
+	else if (!IsLoading && AllCategories.Count > 0 && !IsLoggedIn && string.IsNullOrWhiteSpace(Email))
+	{
+		<div class="flex p-5 bg-gray-600 text-white text-sm rounded-lg justify-between gap-2">
+			<div>
+				You are not logged in and will be unable to record or upload whilst logged out.
+			</div>
+
+			<div>
+				<RadzenButton Click=@Login Text="Login" ButtonStyle="ButtonStyle.Light" class="!rounded-full" />
+			</div>
+		</div>
+	}
+
+	<div>
+		Please fill out the information below and begin recording your session.
+		Navigate to the <i>Uploads</i> tab to submit once the session has concluded.
+	</div>
+
+	<EditForm EditContext="EditContext" OnValidSubmit="OnSubmitForm">
+		<DataAnnotationsValidator />
+
+		<div class="flex flex-col gap-3">
+			<div>
+				<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Case ID</RadzenText>
+				<RadzenTextBox Placeholder="e.g. AB123456" @bind-Value="Form.CaseId" class="w-full" />
+				<ValidationMessage For="() => Form.CaseId" class="text-sm text-red-600 mt-1" />
+			</div>
+
+			<div>
+				<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Service Area</RadzenText>
+
+				@if (IsLoading)
+				{
+					<RadzenTextBox Placeholder="Loading..." class="w-full" Disabled="true" />
+				}
+				else
+				{
+					<RadzenDropDown TValue="Category" @bind-Value="Form.Category" Data="AllCategories" Change="@(value => OnChangeCategory(value))" class="w-full" />
+				}
+				<ValidationMessage For="() => Form.Category" class="text-sm text-red-600 mt-1" />
+			</div>
+
+			@if (Form.Category != null && FilteredSubCategories.Count > 0)
+			{
+				<div>
+					<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Service Function / Meeting</RadzenText>
+					<RadzenDropDown TValue="Subcategory" @bind-Value="Form.SubCategory" Change="@(value => OnChangeSubCategory(value))" Data="FilteredSubCategories" class="w-full" />
+					<ValidationMessage For="() => Form.SubCategory" class="text-sm text-red-600 mt-1" />
+				</div>
+			}
+		</div>
+
+		<div class="flex flex-col gap-5 mt-12">
+			<div class="flex gap-5 justify-around items-center">
+				@{
+					var recordButtonCss = AudioRecordingService.IsRecording ? "!rounded-full !h-18 !w-18 relative record-pulse" : "!rounded-full !h-18 !w-18 relative";
+				}
+
+				@if (AudioRecordingService.IsRecording || AudioRecordingService.IsPaused)
+				{
+					<RadzenButton Click=@(args => StopRecording()) Icon="stop" ButtonStyle="ButtonStyle.Light" class="!rounded-full !h-14 !w-14" />
+				}
+
+				<RadzenButton ButtonType="ButtonType.Submit" Icon="mic" Size="ButtonSize.Large" ButtonStyle="ButtonStyle.Danger" Disabled="AudioRecordingService.IsRecording || AudioRecordingService.IsPaused || !RecordPageState.CanRecord" class="@recordButtonCss" />
+
+				@if (AudioRecordingService.IsRecording)
+				{
+					<RadzenButton Click=@(args => PauseRecording()) Icon="pause" ButtonStyle="ButtonStyle.Light" class="!rounded-full !h-14 !w-14" />
+				}
+
+				@if (AudioRecordingService.IsPaused)
+				{
+					<RadzenButton Click=@(args => ResumeRecording()) Icon="resume" ButtonStyle="ButtonStyle.Secondary" class="!rounded-full !h-14 !w-14" />
+				}
+			</div>
+		</div>
+
+		<div class="mt-8 flex flex-col items-center justify-center">
+			<div class="text-4xl font-medium">@RecordingDuration</div>
+		</div>
+
+	</EditForm>
+
+	@if (RecordPageState.IsRecordingComplete)
+	{
+		<div class="flex gap-3 w-full">
+			<RadzenButton Click="() => SaveRecording()" Text="Save Recording" ButtonStyle="ButtonStyle.Primary" class="!rounded-full !w-full" />
+			<RadzenButton Click="() => ResetRecording()" Text="Reset Recording" ButtonStyle="ButtonStyle.Danger" class="!rounded-full !w-full" />
+		</div>
+	}
+
+	@if (!string.IsNullOrWhiteSpace(AudioSource))
+	{
+		<div>
+			<audio controls controlsList="nodownload" src="@AudioSource" class="w-full">
+				Your browser does not support the audio element.
+			</audio>
+		</div>
+	}
+</div>
+
+@code {
+	private string AudioSource { get; set; }
+	private bool IsLoggedIn { get; set; }
+	private bool IsLoading { get; set; } = true;
+	private NetworkAccess NetworkAccess { get; set; }
+	private string? Email { get; set; } = null;
+
+	[CascadingParameter] private EditContext EditContext { get; set; }
+
+	private List<Category> AllCategories { get; set; } = [];
+	private List<Subcategory> AllSubCategories { get; set; } = [];
+	private List<Subcategory> FilteredSubCategories { get; set; } = [];
+
+	public string RecordingDuration => AudioRecordingService.RecordingElapsed.ToString(@"hh\:mm\:ss");
+
+	protected override async Task OnInitializedAsync()
+	{
+		EditContext = new EditContext(Form);
+		EditContext.OnFieldChanged += (sender, eventArgs) => EditContext_OnFieldChanged(sender!, eventArgs);
+
+		NetworkAccess = Connectivity.NetworkAccess;
+		Connectivity.ConnectivityChanged += (object? sender, ConnectivityChangedEventArgs e) =>
+		{
+			NetworkAccess = e.NetworkAccess;
+			StateHasChanged();
+		};
+
+		await GetInitialData();
+
+		AudioRecordingService.RecordingElapsedChanged += OnRecordingElapsedChanged;
+
+		if (await Permissions.RequestAsync<Permissions.Microphone>() != PermissionStatus.Granted)
+		{
+			// Inform user to request permission
+		}
+
+		await base.OnInitializedAsync();
+	}
+
+	public async Task StartRecording(RecordForm form)
+	{
+		var dateTime = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+		var recordingPath = Path.Combine(AudioRecordingService.RecordingsPath, Email, $"{Form.CaseId}-{dateTime}.aac");
+
+		await AudioRecordingService.StartAsync(recordingPath);
+
+		RecordPageState.IsRecordingComplete = false;
+
+		RecordPageState.CurrentRecording.CaseId = form.CaseId;
+		RecordPageState.CurrentRecording.Category = form.Category;
+		RecordPageState.CurrentRecording.SubCategory = form.SubCategory;
+		RecordPageState.CurrentRecording.RecordingPath = recordingPath;
+		RecordPageState.CurrentRecording.Creator = Email;
+
+		StateHasChanged();
+	}
+
+	public async Task StopRecording()
+	{
+		var recordedAudioSource = await AudioRecordingService.StopAsync();
+
+		RecordPageState.IsRecordingComplete = true;
+
+		var recordedAudioStream = recordedAudioSource.GetAudioStream();
+
+		var audioBytes = new byte[recordedAudioStream.Length];
+		await recordedAudioStream.ReadAsync(audioBytes, 0, (int)recordedAudioStream.Length);
+		var base64String = Convert.ToBase64String(audioBytes);
+
+		AudioSource = $"data:audio/aac;base64,{base64String}";
+
+		RecordPageState.CurrentRecording.RecordingDuration = AudioRecordingService.RecordingElapsed;
+
+		StateHasChanged();
+
+		NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Recording complete" });
+	}
+
+	public async Task PauseRecording()
+	{
+		await AudioRecordingService.PauseAsync();
+		StateHasChanged();
+	}
+
+	public async Task ResumeRecording()
+	{
+		await AudioRecordingService.ResumeAsync();
+		StateHasChanged();
+	}
+
+	public async Task SaveRecording()
+	{
+		await StorageService.AddRecording(RecordPageState.CurrentRecording);
+
+		await ResetRecording(true);
+
+		StateHasChanged();
+
+		NavigationManager.NavigateTo("/uploads");
+	}
+
+	public async Task ResetRecording(bool bypassDialog = false)
+	{
+		if (bypassDialog == false)
+		{
+			var hasBeenConfirmed = await DialogService.Confirm("Are you sure you want to reset this recording?", "Reset recording", new ConfirmOptions() { OkButtonText = "Yes", CancelButtonText = "No" });
+			if (hasBeenConfirmed != true)
+			{
+				return;
+			}
+		}
+
+		Form.CaseId = string.Empty;
+		Form.Category = null;
+		Form.SubCategory = null;
+
+		RecordPageState.CurrentRecording = new Recording();
+
+		AudioSource = string.Empty;
+		AudioRecordingService.ResetTimers();
+
+		RecordPageState.IsRecordingComplete = false;
+
+		SetFormInvalidState();
+		DetermineCanRecord();
+		StateHasChanged();
+	}
+
+	public async Task OnChangeCategory(object category)
+	{
+		Form.SubCategory = null;
+
+		var selectedCategory = AllCategories.FirstOrDefault(c => c.Name == category.ToString());
+		if (selectedCategory != null)
+		{
+			FilteredSubCategories = AllSubCategories.Where(_ => _.CategoryId == selectedCategory.Id).ToList();
+		}
+		else
+		{
+			FilteredSubCategories = [];
+		}
+
+		DetermineCanRecord();
+		StateHasChanged();
+	}
+
+	public void OnChangeSubCategory(object subCategory)
+	{
+		DetermineCanRecord();
+		StateHasChanged();
+	}
+
+	public void Dispose()
+	{
+		AudioRecordingService.RecordingElapsedChanged -= OnRecordingElapsedChanged;
+	}
+
+	private void OnRecordingElapsedChanged()
+	{
+		InvokeAsync(StateHasChanged);
+	}
+
+	private async Task OnSubmitForm(EditContext editContext)
+	{
+		await StartRecording(Form);
+	}
+
+	private async Task Login()
+	{
+		await AuthenticationStateProvider.SignInInteractively(CancellationToken.None);
+		await GetInitialData();
+	}
+
+	private async Task GetInitialData()
+	{
+		IsLoading = true;
+		StateHasChanged();
+
+		IsLoggedIn = await AuthService.IsLoggedIn();
+		Email = await AuthService.GetEmail();
+		StateHasChanged();
+
+		AllCategories = await SonicBriefService.GetCategoriesAsync();
+		AllSubCategories = await SonicBriefService.GetSubcategoriesAsync();
+
+		if (Form.Category is not null)
+		{
+			var selectedCategory = AllCategories.FirstOrDefault(c => c.Name == Form.Category.Name);
+			if (selectedCategory != null)
+			{
+				FilteredSubCategories = AllSubCategories.Where(_ => _.CategoryId == selectedCategory.Id).ToList();
+			}
+			else
+			{
+				FilteredSubCategories = [];
+			}
+		}
+
+		SetFormInvalidState();
+		DetermineCanRecord();
+
+		IsLoading = false;
+		StateHasChanged();
+	}
+
+	private void DetermineCanRecord()
+	{
+		if (string.IsNullOrWhiteSpace(Email))
+		{
+			RecordPageState.CanRecord = false;
+			return;
+		}
+
+		if (EditContext is null || !RecordPageState.IsFormValid)
+		{
+			RecordPageState.CanRecord = false;
+			return;
+		}
+
+		RecordPageState.CanRecord = true;
+	}
+
+	private void EditContext_OnFieldChanged(object sender, FieldChangedEventArgs e)
+	{
+		SetFormInvalidState();
+		DetermineCanRecord();
+
+		StateHasChanged();
+	}
+
+	private void SetFormInvalidState()
+	{
+		var validationResults = new List<ValidationResult>();
+		var validationContext = new ValidationContext(EditContext.Model, ServiceProvider, items: null);
+		Validator.TryValidateObject(EditContext.Model, validationContext, validationResults, true);
+
+		RecordPageState.IsFormValid = validationResults.Count == 0;
+
+		StateHasChanged();
+	}
+}

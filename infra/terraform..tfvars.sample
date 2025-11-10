@@ -1,2 +1,9 @@
 # Variables
 subscription_id = "xxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Retention Policy Configuration (Optional - defaults provided)
+# job_retention_days = 14                    # Days to retain completed jobs
+# failed_job_retention_days = 14             # Days to retain failed jobs  
+# retention_dry_run = true                   # true = log only, false = actually delete
+# enable_automatic_retention = true          # Enable automatic retention cleanup
+# retention_batch_size = 100                 # Batch size for retention operations

@@ -1,0 +1,1 @@
+This file was removed because the header is now inlined in the view component and is no longer needed.

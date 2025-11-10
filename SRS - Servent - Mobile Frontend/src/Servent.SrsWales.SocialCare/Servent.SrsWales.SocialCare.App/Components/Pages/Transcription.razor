@@ -1,0 +1,103 @@
+﻿@page "/uploads/{RecordingId:guid}/transcription"
+@using Servent.SrsWales.SocialCare.App.Data
+@using Servent.SrsWales.SocialCare.App.Services
+@using Servent.SrsWales.SocialCare.App.Services.SonicBrief
+@using Servent.SrsWales.SocialCare.App.Services.SonicBrief.Models
+@using Markdig;
+
+@inject StorageService StorageService
+@inject NavigationManager NavigationManager
+@inject SonicBriefService SonicBriefService
+
+<div class="flex flex-col gap-5 p-5">
+
+	<div class="flex justify-between gap-2 items-center">
+		<div class="text-lg font-medium">
+			Case: @Recording?.CaseId
+		</div>
+		<RadzenButton Click="Close" Icon="close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Dark" class="!rounded-full" />
+	</div>
+
+	<div class="h-px px-5 bg-gray-200 w-full"></div>
+
+	@if (IsLoading)
+	{
+		<div class="flex justify-center items-center mt-12">
+			<RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Dark" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+		</div>
+	} 
+	else
+	{
+		@if (!string.IsNullOrWhiteSpace(TranscriptionText))
+		{
+			<pre class="text-xs whitespace-pre-wrap">@TranscriptionText</pre>
+		}
+		else
+		{
+			<div class="p-5 text-center text-gray-400 mt-16 font-medium">No transcription available.</div>
+		}
+	}
+
+</div>
+
+@code {
+	[Parameter]
+	public Guid RecordingId { get; set; }
+
+	private bool IsLoading { get; set; } = false;
+	private Recording? Recording { get; set; } = null;
+	private string TranscriptionText { get; set; } = string.Empty;
+
+	protected override async Task OnInitializedAsync()
+	{
+		await GetInitialData();
+
+		await base.OnInitializedAsync();
+	}
+	private async Task GetInitialData()
+	{
+		IsLoading = true;
+		StateHasChanged();
+
+		// Get recording from storage
+		await GetRecording();
+		StateHasChanged();
+
+		await GetTranscription();
+
+		IsLoading = false;
+		StateHasChanged();
+	}
+
+	private async Task GetRecording()
+	{
+		var recordings = await StorageService.GetRecordings();
+		if (recordings.Count == 0)
+		{
+			NavigationManager.NavigateTo("/uploads");
+		}
+
+		var recording = recordings.FirstOrDefault(_ => _.Id == RecordingId);
+		if (recording is null)
+		{
+			NavigationManager.NavigateTo("/uploads");
+		}
+
+		Recording = recording;
+	}
+
+	private async Task GetTranscription()
+	{
+		if (string.IsNullOrWhiteSpace(Recording?.JobId))
+		{
+			return;
+		};
+
+		TranscriptionText = await SonicBriefService.GetTranscription(Recording.JobId);
+	}
+
+	private void Close()
+	{
+		NavigationManager.NavigateTo($"/uploads/{RecordingId}");
+	}
+}

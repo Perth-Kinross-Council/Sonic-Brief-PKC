@@ -1,13 +1,11 @@
 import logging
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import requests
-from azure.identity import DefaultAzureCredential
-import azure_oai
+from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 import os
 import sys
 import json
-import base64
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from config import AppConfig
@@ -18,7 +16,12 @@ class TranscriptionService:
     def __init__(self, config: AppConfig):
         self.config = config
         self.logger = logging.getLogger(__name__)
-        self.credential = DefaultAzureCredential()
+        # Use ManagedIdentityCredential for Azure Functions
+        client_id = os.getenv("AZURE_CLIENT_ID")
+        if client_id:
+            self.credential = ManagedIdentityCredential(client_id=client_id)
+        else:
+            self.credential = ManagedIdentityCredential()
         self.storage_service = StorageService(config)
         self.endpoint = f"https://{config.speech_deployment}.cognitiveservices.azure.com/speechtotext/v3.2"
         self.logger.info(

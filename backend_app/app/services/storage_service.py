@@ -4,10 +4,10 @@ from typing import Optional, AsyncGenerator
 from azure.storage.blob import BlobServiceClient, BlobSasPermissions, generate_blob_sas
 from azure.storage.blob.aio import BlobClient as AsyncBlobClient
 from azure.identity import DefaultAzureCredential
-from azure.core.exceptions import AzureError
+from azure.core.exceptions import AzureError, ServiceRequestError, ResourceNotFoundError
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
-from azure.core.exceptions import ResourceNotFoundError
+import time
 from app.core.config import AppConfig
 
 
@@ -15,49 +15,69 @@ class StorageService:
     def __init__(self, config: AppConfig):
         self.config = config
         self.logger = logging.getLogger(__name__)
-        self.credential = DefaultAzureCredential()
-
-        # Initialize blob service client
-        self.blob_service_client = BlobServiceClient(
-            account_url=self.config.storage.account_url, credential=self.credential
-        )
+        
+        # Configure retry settings
+        self.max_retries = 3
+        self.retry_delay = 1
+        
+        try:
+            self.credential = DefaultAzureCredential()
+            
+            # Initialize blob service client with retry configuration
+            self.blob_service_client = BlobServiceClient(
+                account_url=self.config.storage.account_url, 
+                credential=self.credential
+            )
+            
+            self.logger.debug("StorageService initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize StorageService: {str(e)}")
+            raise
 
     def generate_sas_token(self, blob_url: str) -> Optional[str]:
-        """Generate SAS token for a blob URL using managed identity"""
-        try:
-            if not blob_url:
-                return None
-
-            # Parse blob URL to get container and blob name
-            parsed_url = urlparse(blob_url)
-            path_parts = parsed_url.path.strip("/").split("/")
-            if len(path_parts) < 2:
-                return None
-
-            container_name = path_parts[0]
-            blob_name = "/".join(path_parts[1:])
-
-            # Get user delegation key using managed identity
-            user_delegation_key = self.blob_service_client.get_user_delegation_key(
-                key_start_time=datetime.utcnow() - timedelta(minutes=5),
-                key_expiry_time=datetime.utcnow() + timedelta(hours=8),
-            )
-
-            # Generate SAS token using user delegation key
-            sas_token = generate_blob_sas(
-                account_name=parsed_url.netloc.split(".")[0],
-                container_name=container_name,
-                blob_name=blob_name,
-                user_delegation_key=user_delegation_key,
-                permission=BlobSasPermissions(read=True),
-                expiry=datetime.utcnow() + timedelta(hours=8),
-            )
-
-            return sas_token
-
-        except Exception as e:
-            self.logger.error(f"Error generating SAS token: {str(e)}")
+        """Generate SAS token for a blob URL using managed identity with retry logic"""
+        if not blob_url:
             return None
+            
+        for attempt in range(self.max_retries):
+            try:
+                # Parse blob URL to get container and blob name
+                parsed_url = urlparse(blob_url)
+                path_parts = parsed_url.path.strip("/").split("/")
+                if len(path_parts) < 2:
+                    self.logger.warning(f"Invalid blob URL format: {blob_url}")
+                    return None
+
+                container_name = path_parts[0]
+                blob_name = "/".join(path_parts[1:])
+
+                # Get user delegation key using managed identity
+                user_delegation_key = self.blob_service_client.get_user_delegation_key(
+                    key_start_time=datetime.utcnow() - timedelta(minutes=5),
+                    key_expiry_time=datetime.utcnow() + timedelta(hours=8),
+                )
+
+                # Generate SAS token using user delegation key
+                sas_token = generate_blob_sas(
+                    account_name=parsed_url.netloc.split(".")[0],
+                    container_name=container_name,
+                    blob_name=blob_name,
+                    user_delegation_key=user_delegation_key,
+                    permission=BlobSasPermissions(read=True),
+                    expiry=datetime.utcnow() + timedelta(hours=8),
+                )
+
+                return sas_token
+
+            except ServiceRequestError as e:
+                self.logger.error(f"Service request error generating SAS token (attempt {attempt + 1}): {str(e)}")
+                if attempt == self.max_retries - 1:
+                    self.logger.error("Failed to generate SAS token after all retries")
+                    return None
+                time.sleep(self.retry_delay * (2 ** attempt))
+            except Exception as e:
+                self.logger.error(f"Unexpected error generating SAS token: {str(e)}")
+                return None
 
     def add_sas_token_to_url(self, blob_url: str) -> str:
         """Add SAS token to blob URL if not already present"""
@@ -71,39 +91,55 @@ class StorageService:
         self.logger.debug(f"No SAS token generated for blob URL: {blob_url}")
         return blob_url
 
-    def upload_file(self, file_path: str, original_filename: str) -> str:
-        """Upload a file to blob storage"""
-        try:
-            container_client = self.blob_service_client.get_container_client(
-                self.config.storage.recordings_container
-            )
+    def upload_file(self, file_path: str, original_filename: str, case_id: Optional[str] = None) -> str:
+        """Upload a file to blob storage with correct OWD naming convention"""
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+            
+        for attempt in range(self.max_retries):
+            try:
+                container_client = self.blob_service_client.get_container_client(
+                    self.config.storage.recordings_container
+                )
 
-            # Sanitize filename - replace spaces with underscores
-            sanitized_filename = original_filename.replace(" ", "_")
-            self.logger.debug(
-                f"Sanitized filename: {original_filename} -> {sanitized_filename}"
-            )
+                # Sanitize filename - replace spaces with underscores and remove special chars
+                sanitized_filename = original_filename.replace(" ", "_")
+                # Remove any path separators to prevent directory traversal
+                sanitized_filename = sanitized_filename.replace("/", "_").replace("\\", "_")
+                
+                self.logger.debug(f"Sanitized filename: {original_filename} -> {sanitized_filename}")
 
-            # Generate blob name with date and nested structure
-            current_date = datetime.now().strftime("%Y-%m-%d")
-            file_name_without_ext = os.path.splitext(sanitized_filename)[0]
-            blob_name = f"{current_date}/{file_name_without_ext}/{sanitized_filename}"
+                # Generate OWD-compliant blob name: date/filename_folder/actual_filename
+                # The folder is named after the filename (without extension)
+                current_date = datetime.now().strftime("%Y-%m-%d")
+                file_name_without_ext = os.path.splitext(sanitized_filename)[0]
+                blob_name = f"{current_date}/{file_name_without_ext}/{sanitized_filename}"
 
-            blob_client = container_client.get_blob_client(blob_name)
+                blob_client = container_client.get_blob_client(blob_name)
 
-            # Upload the file
-            self.logger.info(f"Uploading file to blob storage: {blob_name}")
-            with open(file_path, "rb") as data:
-                blob_client.upload_blob(data, overwrite=True)
+                # Upload the file with progress logging
+                file_size = os.path.getsize(file_path)
+                self.logger.info(f"Uploading file to blob storage: {blob_name} ({file_size} bytes)")
+                
+                with open(file_path, "rb") as data:
+                    blob_client.upload_blob(data, overwrite=True)
 
-            return blob_client.url
+                self.logger.info(f"File uploaded successfully: {blob_client.url}")
+                return blob_client.url
 
-        except AzureError as e:
-            self.logger.error(f"Azure storage error: {str(e)}")
-            raise
-        except Exception as e:
-            self.logger.error(f"Error uploading file: {str(e)}")
-            raise
+            except ServiceRequestError as e:
+                self.logger.error(f"Service request error uploading file (attempt {attempt + 1}): {str(e)}")
+                if attempt == self.max_retries - 1:
+                    raise
+                time.sleep(self.retry_delay * (2 ** attempt))
+            except AzureError as e:
+                self.logger.error(f"Azure storage error uploading file (attempt {attempt + 1}): {str(e)}")
+                if attempt == self.max_retries - 1:
+                    raise
+                time.sleep(self.retry_delay * (2 ** attempt))
+            except Exception as e:
+                self.logger.error(f"Unexpected error uploading file: {str(e)}")
+                raise
 
     async def stream_blob_content(
         self, file_blob_url: str

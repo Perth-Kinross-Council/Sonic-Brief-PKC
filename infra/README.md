@@ -15,6 +15,8 @@
 ## Overview
 This repository contains Terraform code to deploy an Azure-based Echo Brief solution, which includes various Azure services configured to work together seamlessly.
 
+> Configuration Reference: For runtime/environment variable mapping (e.g., `backend_log_level` -> `BACKEND_LOG_LEVEL`, CORS origins), see the root [`CONFIGURATION.md`](../CONFIGURATION.md). This README focuses on infrastructure workflow; the configuration file is the canonical source for env var details.
+
 ## Prerequisites
 Before you start, ensure you have:
 - [Terraform](https://www.terraform.io/downloads.html) installed locally
@@ -66,7 +68,7 @@ terraform {
     resource_group_name  = "terraform"
     storage_account_name = "terraform9999"
     container_name       = "tfstate"
-    key                  = "echo-brief.tfstate"
+    key                  = "sonic-brief.tfstate"
     use_azuread_auth     = true
   }
 }
@@ -204,7 +206,7 @@ Common issues and solutions:
 ### Dependencies
 1. **Azure CLI**: [Install the Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
    - Required for user authentication
-   
+
 2. **Terraform**: [Install Terraform](https://developer.hashicorp.com/terraform/downloads)
    - Deploys the resources
 
@@ -247,7 +249,7 @@ variable "prefix" {
 }
 
 variable "name" {
-  default = "echo-brief"         # Project name
+  default = "sonic-brief"         # Project name
 }
 
 variable "environment" {
@@ -288,7 +290,7 @@ variable "resource_group_name" {
 }
 
 variable "custom_domain" {
-  default = "echo-brief"
+  default = "sonic-brief"
 }
 
 # SKU and Service Settings
@@ -408,8 +410,8 @@ If you encounter an error similar to the snippet below when creating a deploymen
 ```h
 ╷
 │ Error: creating Deployment (Subscription: "299017f8-8082-4f07-9e0c-86f500a4e95f"
-│ Resource Group Name: "tf-echo-brief-dev-accelerator-rg"
-│ Account Name: "tf-echo-brief-dev-openai"
+│ Resource Group Name: "tf-sonic-brief-dev-accelerator-rg"
+│ Account Name: "tf-sonic-brief-dev-openai"
 │ Deployment Name: "gpt-4o"): performing CreateOrUpdate: unexpected status 400 (400 Bad Request) with error: InsufficientQuota: This operation require 100 new capacity in quota Tokens Per Minute (thousands) - gpt-4o, which is bigger than the current available capacity 1. The current quota usage is 0 and the quota limit is 1 for quota Tokens Per Minute (thousands) - gpt-4o.
 │
 │   with azurerm_cognitive_deployment.openai_deployments["gpt-4o"],
@@ -417,8 +419,8 @@ If you encounter an error similar to the snippet below when creating a deploymen
 │   55: resource "azurerm_cognitive_deployment" "openai_deployments" {
 │
 │ creating Deployment (Subscription: "299017f8-8082-4f07-9e0c-86f500a4e95f"
-│ Resource Group Name: "tf-echo-brief-dev-accelerator-rg"
-│ Account Name: "tf-echo-brief-dev-openai"
+│ Resource Group Name: "tf-sonic-brief-dev-accelerator-rg"
+│ Account Name: "tf-sonic-brief-dev-openai"
 │ Deployment Name: "gpt-4o"): performing CreateOrUpdate: unexpected status 400 (400 Bad Request) with error: InsufficientQuota: This operation require 100 new capacity in quota Tokens Per Minute (thousands) - gpt-4o, which is bigger than the current available capacity
 │ 1. The current quota usage is 0 and the quota limit is 1 for quota Tokens Per Minute (thousands) - gpt-4o.
 ```
@@ -427,17 +429,17 @@ This error means that your deployment is attempting to allocate more quota than 
 
 #### How to Resolve:
 
-1. **Request Additional Quota:**  
-   - Open the Azure Portal and navigate to your subscription’s quota page.  
-   - Locate the quota for **Tokens Per Minute (thousands)** associated with `gpt-4o`.  
+1. **Request Additional Quota:**
+   - Open the Azure Portal and navigate to your subscription’s quota page.
+   - Locate the quota for **Tokens Per Minute (thousands)** associated with `gpt-4o`.
    - Click on **Request Increase** and fill in the necessary details.
 
-2. **Follow the Screenshots:**  
+2. **Follow the Screenshots:**
    - Refer to the screenshots provided in this repository that illustrate the step-by-step process to request an increased quota.
 ![OpenAI portal](./images/openai_1.png)
 ![Go to AI Foundry](./images/openai_2.png)
 ![Request Quota](./images/openai_3.png)
-3. **Re-run the Deployment:**  
+3. **Re-run the Deployment:**
    - Once your quota has been increased, re-run the deployment to verify that the error has been resolved.
 
 If you continue to experience issues, please open a GitHub issue with details of your configuration and the error output.
@@ -479,10 +481,10 @@ To successfully create prompts, follow these steps:
 Before running `prompts.sh`, replace the necessary variables inside the script:
 
 ```sh
-# Replace {backend} with your backend's base URL (e.g., my.backend.service.azurewebsites.net)                                                                    
+# Replace {backend} with your backend's base URL (e.g., my.backend.service.azurewebsites.net)
 API_BASE_URL="{your_backend_url}"
 
-# Replace with your registered account credentials (the account you registered on the website)                              
+# Replace with your registered account credentials (the account you registered on the website)
 EMAIL="your_email@example.com"
 PASSWORD="your_secure_password"
 ```

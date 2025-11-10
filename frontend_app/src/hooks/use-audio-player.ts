@@ -15,7 +15,9 @@ export function useAudioPlayer(src: string | undefined) {
     if (!audio) return;
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleLoadedMetadata = () => setDuration(audio.duration);
+  const handleLoadedMetadata = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+  const handleLoadedData = () => setDuration(audio.duration || 0);
+  const handleDurationChange = () => setDuration(audio.duration || 0);
     const handleEnded = () => setIsPlaying(false);
     const handleVolumeChange = () => {
       // Sync state if volume changed externally (less common, but good practice)
@@ -27,28 +29,45 @@ export function useAudioPlayer(src: string | undefined) {
       setIsMuted(audio.muted); // Also sync muted state
     };
 
-    // Set initial volume and muted state from default state
+  // Always ensure we only load metadata to compute duration
+  audio.preload = 'metadata';
+
+  // Set initial volume and muted state from default state
     audio.volume = displayVolume / 100;
     audio.muted = isMuted;
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-    audio.addEventListener("ended", handleEnded);
+  audio.addEventListener("ended", handleEnded);
     audio.addEventListener("volumechange", handleVolumeChange);
+  audio.addEventListener("loadeddata", handleLoadedData);
+  audio.addEventListener("durationchange", handleDurationChange);
 
-    // Set initial duration if metadata already loaded
-    if (audio.readyState >= 1) {
+    // Set initial duration if metadata already loaded, else trigger a load
+    if (audio.readyState >= 1 && Number.isFinite(audio.duration)) {
       handleLoadedMetadata();
+    } else {
+      try {
+        audio.load(); // trigger metadata fetch
+      } catch {}
     }
 
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
-      audio.removeEventListener("ended", handleEnded);
+  audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("volumechange", handleVolumeChange);
+  audio.removeEventListener("loadeddata", handleLoadedData);
+  audio.removeEventListener("durationchange", handleDurationChange);
     };
     // Rerun effect only if the audio source changes
-  }, [src, displayVolume, isMuted]); // Added displayVolume and isMuted dependencies
+  }, [src, displayVolume, isMuted]); // Re-run when source or volume/mute state changes
+
+  // Reset times when the source changes
+  useEffect(() => {
+    setCurrentTime(0);
+    setDuration(0);
+  }, [src]);
 
   // Effect for handling play/pause state changes
   useEffect(() => {

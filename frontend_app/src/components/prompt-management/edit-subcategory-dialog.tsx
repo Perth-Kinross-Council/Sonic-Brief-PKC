@@ -1,7 +1,7 @@
-import type { SubcategoryResponse } from "@/api/prompt-management";
+import type { SubcategoryResponse } from "@/lib/api";
 import type { SubcategoryFormValues } from "@/schema/prompt-management.schema";
 import { useEffect } from "react";
-import { updateSubcategory } from "@/api/prompt-management";
+import { useUpdateSubcategory } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useOptimisticMutation } from "@/hooks/use-optimistic-mutation";
-import { getPromptManagementSubcategoriesQuery } from "@/queries/prompt-management.query";
 import { subcategoryFormSchema } from "@/schema/prompt-management.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -37,6 +36,8 @@ export function EditSubcategoryDialog({
   onOpenChange,
   subcategory,
 }: EditSubcategoryDialogProps) {
+  const updateSubcategory = useUpdateSubcategory();
+  
   const form = useForm<SubcategoryFormValues>({
     resolver: zodResolver(subcategoryFormSchema),
     defaultValues: {
@@ -58,10 +59,11 @@ export function EditSubcategoryDialog({
   }, [subcategory, form]);
 
   const { mutate: editSubcategoryMutation, isPending } = useOptimisticMutation({
-    mutationFn: updateSubcategory,
-    queryKey: getPromptManagementSubcategoriesQuery().queryKey,
-    updateFn: (old = [], newData) =>
-      old.map((sub) =>
+    mutationFn: ({ subcategoryId, name, prompts }: { subcategoryId: string; name: string; prompts: Record<string, string> }) =>
+      updateSubcategory(subcategoryId, name, prompts),
+    queryKey: ["sonic-brief", "prompt-management", "subcategories"],
+    updateFn: (old: SubcategoryResponse[] = [], newData: { subcategoryId: string; name: string; prompts: Record<string, string> }) =>
+      old.map((sub: SubcategoryResponse) =>
         sub.id === newData.subcategoryId
           ? { ...sub, name: newData.name, prompts: newData.prompts }
           : sub,

@@ -11,6 +11,10 @@ export default defineConfig({
     viteReact(),
     tailwindcss(),
   ],
+  build: {
+    // Keep behavior unchanged; just raise the warning ceiling to reduce noise
+    chunkSizeWarningLimit: 3000, // in kB
+  },
   test: {
     globals: true,
     environment: "jsdom",
@@ -18,6 +22,21 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
+    },
+  },
+  optimizeDeps: {
+    exclude: ["@ffmpeg/ffmpeg", "@ffmpeg/util"],
+  },
+  server: {
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    },
+  },
+  preview: {
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
     },
   },
 });

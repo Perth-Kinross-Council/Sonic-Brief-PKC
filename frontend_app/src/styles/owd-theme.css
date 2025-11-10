@@ -1,0 +1,508 @@
+/* Welsh Government Design System (OWD) Theme */
+/* Official One Wales Design color palette and styling */
+
+:root {
+  /* Welsh Government Primary Colors */
+  --owd-green: #00823B;
+  --owd-green-dark: #006B32;
+  --owd-green-light: #E8F5E8;
+  
+  /* Welsh Government Secondary Colors */
+  --owd-red: #D4351C;
+  --owd-yellow: #FFDD00;
+  --owd-blue: #1D70B8;
+  --owd-purple: #4C2C92;
+  
+  /* Welsh Government Neutral Colors */
+  --owd-grey-dark: #0B0C0C;
+  --owd-grey: #505A5F;
+  --owd-grey-light: #F3F2F1;
+  --owd-white: #FFFFFF;
+  
+  /* Additional Helper Colors */
+  --owd-border: #B1B4B6;
+  --owd-focus: #FFDD00;
+  --owd-error: #D4351C;
+  --owd-success: #00823B;
+  --owd-warning: #F47738;
+  --owd-info: #1D70B8;
+}
+
+/* OWD Typography */
+.owd-heading-xl {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--owd-grey-dark);
+  margin-bottom: 1rem;
+}
+
+.owd-heading-lg {
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--owd-grey-dark);
+  margin-bottom: 0.75rem;
+}
+
+.owd-heading-md {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--owd-grey-dark);
+  margin-bottom: 0.5rem;
+}
+
+.owd-text-body {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--owd-grey);
+}
+
+.owd-text-small {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--owd-grey);
+}
+
+/* OWD Component Styles */
+.owd-card {
+  background: white;
+  border: 1px solid var(--owd-border);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.owd-card-header {
+  background-color: var(--owd-grey-light);
+  border-bottom: 1px solid var(--owd-border);
+  padding: 1.5rem;
+}
+
+.owd-card-content {
+  padding: 1.5rem;
+}
+
+.owd-button-primary {
+  background-color: var(--owd-green);
+  border: 2px solid var(--owd-green);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.owd-button-primary:hover:not(:disabled) {
+  background-color: var(--owd-green-dark);
+  border-color: var(--owd-green-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 130, 59, 0.3);
+}
+
+.owd-button-primary:focus:not(:disabled) {
+  outline: 3px solid var(--owd-focus);
+  outline-offset: 2px;
+}
+
+.owd-button-primary:disabled {
+  background-color: var(--owd-grey);
+  border-color: var(--owd-grey);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.owd-button-secondary {
+  background-color: transparent;
+  border: 2px solid var(--owd-green);
+  color: var(--owd-green);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.owd-button-secondary:hover:not(:disabled) {
+  background-color: var(--owd-green-light);
+}
+
+.owd-language-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  border: 1px solid var(--owd-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.owd-language-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--owd-grey);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.owd-language-btn.active {
+  background-color: var(--owd-green);
+  color: white;
+}
+
+.owd-language-btn:hover:not(.active) {
+  background-color: var(--owd-grey-light);
+}
+
+/* OWD Form Elements */
+.owd-form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--owd-grey-dark);
+  font-size: 0.875rem;
+}
+
+.owd-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--owd-border);
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.owd-input:focus {
+  outline: 3px solid var(--owd-focus);
+  outline-offset: 0;
+  border-color: var(--owd-grey-dark);
+}
+
+.owd-input:invalid {
+  border-color: var(--owd-error);
+}
+
+.owd-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--owd-border);
+  border-radius: 4px;
+  background-color: white;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.owd-select:focus {
+  outline: 3px solid var(--owd-focus);
+  outline-offset: 0;
+  border-color: var(--owd-grey-dark);
+}
+
+/* OWD File Upload */
+.owd-file-upload {
+  border: 2px dashed var(--owd-border);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  background-color: #fafafa;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.owd-file-upload:hover {
+  border-color: var(--owd-green);
+  background-color: var(--owd-green-light);
+}
+
+.owd-file-upload.drag-over {
+  border-color: var(--owd-green);
+  background-color: var(--owd-green-light);
+  transform: scale(1.02);
+}
+
+.owd-file-upload-icon {
+  font-size: 3rem;
+  color: var(--owd-grey);
+  margin-bottom: 1rem;
+}
+
+.owd-file-upload.drag-over .owd-file-upload-icon {
+  color: var(--owd-green);
+}
+
+/* OWD Progress Indicators */
+.owd-progress {
+  width: 100%;
+  height: 12px;
+  background-color: var(--owd-grey-light);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.owd-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--owd-green), var(--owd-blue));
+  transition: width 0.3s ease-in-out;
+  border-radius: 6px;
+  width: var(--progress-width, 0%);
+}
+
+.owd-step-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.owd-step-progress .owd-progress {
+  flex: 1;
+  height: 8px;
+}
+
+/* OWD Alerts and Messages */
+.owd-alert {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border-left: 4px solid;
+}
+
+.owd-alert-success {
+  background-color: var(--owd-green-light);
+  border-left-color: var(--owd-success);
+  color: var(--owd-grey-dark);
+}
+
+.owd-alert-error {
+  background-color: #fef2f2;
+  border-left-color: var(--owd-error);
+  color: var(--owd-grey-dark);
+}
+
+.owd-alert-warning {
+  background-color: #fef7ed;
+  border-left-color: var(--owd-warning);
+  color: var(--owd-grey-dark);
+}
+
+.owd-alert-info {
+  background-color: #eff6ff;
+  border-left-color: var(--owd-info);
+  color: var(--owd-grey-dark);
+}
+
+/* OWD Badge */
+.owd-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: var(--owd-green-light);
+  color: var(--owd-green-dark);
+  border: 1px solid var(--owd-green);
+}
+
+/* Welsh Government Header */
+.owd-header {
+  background: white;
+  border-bottom: 4px solid var(--owd-green);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.owd-header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.owd-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.owd-header-logo {
+  width: 3rem;
+  height: 3rem;
+  background-color: var(--owd-green);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+.owd-header-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--owd-grey-dark);
+  margin: 0;
+}
+
+.owd-header-subtitle {
+  font-size: 0.875rem;
+  color: var(--owd-grey);
+  margin: 0;
+  margin-top: 0.25rem;
+}
+
+/* Welsh Government Footer */
+.owd-footer {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--owd-border);
+  text-align: center;
+}
+
+.owd-footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--owd-grey);
+}
+
+.owd-footer-separator {
+  width: 1px;
+  height: 1rem;
+  background-color: var(--owd-border);
+}
+
+/* Audio Preview */
+.owd-audio-preview {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid var(--owd-border);
+}
+
+.owd-audio-preview audio {
+  width: 100%;
+}
+
+/* Page Layout */
+.owd-page-container {
+  min-height: 100vh;
+  background: var(--owd-background);
+  font-family: var(--owd-font-body);
+}
+
+.owd-loading-container {
+  padding: 2rem;
+  text-align: center;
+  background: var(--owd-background);
+  color: var(--owd-text-primary);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--owd-font-body);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .owd-heading-xl {
+    font-size: 1.875rem;
+  }
+  
+  .owd-heading-lg {
+    font-size: 1.5rem;
+  }
+  
+  .owd-header-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .owd-footer-content {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .owd-footer-separator {
+    width: 100%;
+    height: 1px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .owd-button-primary,
+  .owd-button-secondary,
+  .owd-language-toggle {
+    display: none;
+  }
+  
+  .owd-card {
+    box-shadow: none;
+    border: 1px solid var(--owd-grey);
+  }
+  
+  .owd-header {
+    border-bottom: 2px solid var(--owd-green);
+  }
+}
+
+/* Animation Utilities */
+@keyframes owd-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.owd-pulse {
+  animation: owd-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes owd-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.owd-spin {
+  animation: owd-spin 1s linear infinite;
+}
+
+/* Focus Management */
+.owd-focus-ring:focus {
+  outline: 3px solid var(--owd-focus);
+  outline-offset: 2px;
+}
+
+/* Screen Reader Only */
+.owd-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

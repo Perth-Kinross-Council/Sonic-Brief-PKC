@@ -1,10 +1,16 @@
 openai==1.72.0
 python-dotenv==1.0.1
 requests
-reportlab==4.2.5
+# reportlab==4.2.5  # DEPRECATED: Commented out as we now use DOCX instead of PDF
 azure-functions==1.23.0
 azure-cosmos==4.9.0
 azure-common==1.1.28
 azure-core==1.33.0
 azure-identity==1.21.0
 azure-storage-blob==12.25.1
+pyjwt[crypto]
+# DOCX generation dependencies - Primary document output format
+markdown>=3.4.0
+python-docx>=0.8.11
+beautifulsoup4>=4.11.0
+mutagen>=1.47.0

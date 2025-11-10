@@ -9,7 +9,7 @@
 
 # Login to get Bearer token
 # @name login
-POST {{host}}/login
+POST {{host}}/auth/login
 Content-Type: application/json
 
 {
@@ -25,7 +25,7 @@ Content-Type: application/json
 ### Category APIs
 
 # Create a new category
-POST {{host}}/categories
+POST {{host}}/prompts/categories
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -36,21 +36,21 @@ Authorization: Bearer {{token}}
 ###
 
 # List all categories
-GET {{host}}/categories
+GET {{host}}/prompts/categories
 Authorization: Bearer {{token}}
 
 ###
 
 # Get a specific category
 # Replace with a real category ID
-GET {{host}}/categories/category_1742479490162
+GET {{host}}/prompts/categories/category_1742479490162
 Authorization: Bearer {{token}}
 
 ###
 
 # Update a category
 # Replace with a real category ID
-PUT {{host}}/categories/category_1742479490162
+PUT {{host}}/prompts/categories/category_1742479490162
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -62,7 +62,7 @@ Authorization: Bearer {{token}}
 
 # Delete a category
 # Replace with a real category ID
-DELETE {{host}}/categories/category_123456789
+DELETE {{host}}/prompts/categories/category_123456789
 Authorization: Bearer {{token}}
 
 ###
@@ -70,7 +70,7 @@ Authorization: Bearer {{token}}
 ### Subcategory APIs
 
 # Create a subcategory
-POST {{host}}/subcategories
+POST {{host}}/prompts/subcategories
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -85,28 +85,28 @@ Authorization: Bearer {{token}}
 ###
 
 # List all subcategories
-GET {{host}}/subcategories
+GET {{host}}/prompts/subcategories
 Authorization: Bearer {{token}}
 
 ###
 
 # List subcategories for a specific category
 # Replace with a real category ID
-GET {{host}}/subcategories?category_id=category_1742486517780
+GET {{host}}/prompts/subcategories?category_id=category_1742486517780
 Authorization: Bearer {{token}}
 
 ###
 
 # Get a specific subcategory
 # Replace with a real subcategory ID
-GET {{host}}/subcategories/subcategory_1742486537331_Subtest2
+GET {{host}}/prompts/subcategories/subcategory_1742486537331_Subtest2
 Authorization: Bearer {{token}}
 
 ###
 
 # Update a subcategory
 # Replace with a real subcategory ID
-PUT {{host}}/subcategories/subcategory_1743006891860_Greetings
+PUT {{host}}/prompts/subcategories/subcategory_1743006891860_Greetings
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -121,15 +121,56 @@ Authorization: Bearer {{token}}
 
 # Delete a subcategory
 # Replace with a real subcategory ID
-DELETE {{host}}/subcategories/subcategory_1742486537331_Subtest2
+DELETE {{host}}/prompts/subcategories/subcategory_1742486537331_Subtest2
 Authorization: Bearer {{token}}
+
+###
+
+### Jobs APIs
+
+# Get all jobs
+GET {{host}}/upload/jobs
+Authorization: Bearer {{token}}
+
+###
+
+# Get jobs with case_id filter
+GET {{host}}/upload/jobs?case_id=CASE123
+Authorization: Bearer {{token}}
+
+###
+
+# Get transcription for a specific job
+# Replace with a real job ID
+GET {{host}}/upload/jobs/transcription/job_123456789
+Authorization: Bearer {{token}}
+
+###
+
+### Upload APIs
+
+# Upload a file (multipart form)
+POST {{host}}/upload/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="file"; filename="test.mp3"
+Content-Type: audio/mpeg
+
+[BINARY FILE DATA HERE]
+------WebKitFormBoundary
+Content-Disposition: form-data; name="prompt_subcategory_id"
+
+subcategory_123456789
+------WebKitFormBoundary--
 
 ###
 
 ### Hierarchical API
 
 # Retrieve all prompts in a hierarchical structure
-GET {{host}}/retrieve_prompts
+GET {{host}}/prompts/retrieve_prompts
 Authorization: Bearer {{token}}
 
 ###
@@ -137,37 +178,58 @@ Authorization: Bearer {{token}}
 # Raw curl commands for reference:
 
 # Create a category:
-# curl -X POST "http://localhost:8000/categories" -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_TOKEN_HERE" -d '{"name": "General"}'
+# curl -X POST "http://localhost:8000/prompts/categories" -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_TOKEN_HERE" -d '{"name": "General"}'
 
 # List all categories:
-# curl -X GET "http://localhost:8000/categories" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+# curl -X GET "http://localhost:8000/prompts/categories" -H "Authorization: Bearer YOUR_TOKEN_HERE"
 
 # Get a specific category:
-# curl -X GET "http://localhost:8000/categories/category_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+# curl -X GET "http://localhost:8000/prompts/categories/category_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
 
 # Update a category:
-# curl -X PUT "http://localhost:8000/categories/category_123456789" -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_TOKEN_HERE" -d '{"name": "Updated Category Name"}'
+# curl -X PUT "http://localhost:8000/prompts/categories/category_123456789" -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_TOKEN_HERE" -d '{"name": "Updated Category Name"}'
 
 # Delete a category:
-# curl -X DELETE "http://localhost:8000/categories/category_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+# curl -X DELETE "http://localhost:8000/prompts/categories/category_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
 
 # Create a subcategory:
-# curl -X POST "http://localhost:8000/subcategories" -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_TOKEN_HERE" -d '{"name": "Greetings", "category_id": "category_123456789", "prompts": {"hello": "Hello, how can I help you?", "goodbye": "Thank you for using our service!"}}'
+# curl -X POST "http://localhost:8000/prompts/subcategories" -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_TOKEN_HERE" -d '{"name": "Greetings", "category_id": "category_123456789", "prompts": {"hello": "Hello, how can I help you?", "goodbye": "Thank you for using our service!"}}'
 
 # List all subcategories:
-# curl -X GET "http://localhost:8000/subcategories" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+# curl -X GET "http://localhost:8000/prompts/subcategories" -H "Authorization: Bearer YOUR_TOKEN_HERE"
 
 # List subcategories for a specific category:
-# curl -X GET "http://localhost:8000/subcategories?category_id=category_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+# curl -X GET "http://localhost:8000/prompts/subcategories?category_id=category_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
 
 # Get a specific subcategory:
-# curl -X GET "http://localhost:8000/subcategories/subcategory_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+# curl -X GET "http://localhost:8000/prompts/subcategories/subcategory_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
 
 # Update a subcategory:
-# curl -X PUT "http://localhost:8000/subcategories/subcategory_123456789" -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_TOKEN_HERE" -d '{"name": "Updated Greetings", "prompts": {"hello": "Hi there! How may I assist you today?", "goodbye": "Have a great day!"}}'
+# curl -X PUT "http://localhost:8000/prompts/subcategories/subcategory_123456789" -H "Content-Type: application/json" -H "Authorization: Bearer YOUR_TOKEN_HERE" -d '{"name": "Updated Greetings", "prompts": {"hello": "Hi there! How may I assist you today?", "goodbye": "Have a great day!"}}'
 
 # Delete a subcategory:
-# curl -X DELETE "http://localhost:8000/subcategories/subcategory_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+# curl -X DELETE "http://localhost:8000/prompts/subcategories/subcategory_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# Get all jobs:
+# curl -X GET "http://localhost:8000/upload/jobs" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# Get jobs with case_id filter:
+# curl -X GET "http://localhost:8000/upload/jobs?case_id=CASE123" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# Get transcription for a specific job:
+# curl -X GET "http://localhost:8000/upload/jobs/transcription/job_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# Upload a file (multipart form):
+# curl -X POST "http://localhost:8000/upload/upload" -H "Authorization: Bearer YOUR_TOKEN_HERE" -F "file=@/path/to/your/file.mp3" -F "prompt_subcategory_id=subcategory_123456789"
 
 # Retrieve all prompts in a hierarchical structure:
-# curl -X GET "http://localhost:8000/retrieve_prompts" -H "Authorization: Bearer YOUR_TOKEN_HERE" 
+# curl -X GET "http://localhost:8000/prompts/retrieve_prompts" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# Get all jobs:
+# curl -X GET "http://localhost:8000/upload/jobs" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# Get jobs with case_id filter:
+# curl -X GET "http://localhost:8000/upload/jobs?case_id=CASE123" -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# Get transcription for a specific job:
+# curl -X GET "http://localhost:8000/upload/jobs/transcription/job_123456789" -H "Authorization: Bearer YOUR_TOKEN_HERE"
