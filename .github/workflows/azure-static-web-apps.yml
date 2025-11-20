@@ -3,7 +3,7 @@ name: Azure Static Web Apps CI/CD
 on:
   push:
     branches:
-      - main  # Change if your deployment branch is different
+      - main
 
 jobs:
   build_and_deploy_job:
@@ -17,9 +17,11 @@ jobs:
           node-version: '18'
 
       - name: Install dependencies
-        run: npm install
+        working-directory: frontend_app
+        run: npm install --legacy-peer-deps
 
       - name: Build Vite app
+        working-directory: frontend_app
         run: npm run build
 
       - name: Deploy to Azure Static Web Apps
@@ -28,5 +30,5 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "frontend_app"        # Root of your app
-          output_location: "dist"  # Vite build output folder
+          app_location: "frontend_app"
+          output_location: "dist"
