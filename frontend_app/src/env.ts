@@ -5,7 +5,7 @@ export const env = {
   VITE_DEBUG: import.meta.env.VITE_DEBUG === "true" || import.meta.env.DEV === true,
   VITE_API_URL: import.meta.env.VITE_API_URL || "http://localhost:8000",
   // App branding
-  VITE_APP_TITLE: import.meta.env.VITE_APP_TITLE || "OneWales Digital",
+  VITE_APP_TITLE: import.meta.env.VITE_APP_TITLE || "Perth and Kinross Council",
   VITE_APP_SUBTITLE: import.meta.env.VITE_APP_SUBTITLE || "Sonic Brief",
   // Azure AD/Entra ID Configuration
   VITE_AZURE_CLIENT_ID: import.meta.env.VITE_AZURE_CLIENT_ID,
