@@ -23,6 +23,16 @@ jobs:
       - name: Build Vite app
         working-directory: frontend_app
         run: npm run build
+        env:
+          VITE_BASE_URL: /
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_AUTH_METHOD: entra
+          VITE_AZURE_CLIENT_ID: ${{ secrets.VITE_AZURE_CLIENT_ID }}
+          VITE_AZURE_TENANT_ID: ${{ secrets.VITE_AZURE_TENANT_ID }}
+          VITE_AZURE_BACKEND_SCOPE: ${{ secrets.VITE_AZURE_BACKEND_SCOPE }}
+          VITE_AZURE_AUDIENCE: ${{ secrets.VITE_AZURE_AUDIENCE }}
+          VITE_APP_TITLE: Perth and Kinross Council
+          VITE_APP_SUBTITLE: Sonic Brief
 
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
