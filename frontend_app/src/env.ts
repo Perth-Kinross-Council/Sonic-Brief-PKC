@@ -9,7 +9,7 @@ export const env = {
   // Debug mode: true if explicitly set or if running in dev mode
   VITE_DEBUG: import.meta.env.VITE_DEBUG === "true" || import.meta.env.DEV === true,
 
-  // API URL: must be injected via .env or GitHub Actions for production
+  // API URL: must be injected via .env or GitHub Actions for production 
   VITE_API_URL: import.meta.env.VITE_API_URL ?? "",
 
   // App branding
