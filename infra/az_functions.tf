@@ -152,7 +152,7 @@ resource "azurerm_monitor_diagnostic_setting" "function_app_diagnostics" {
 # Retry-based zip deployment to mitigate transient SCM restarts
 resource "null_resource" "publish_function_call_zip" {
   triggers = {
-    package_sha = filesha256("./az-func-audio.zip")
+    package_sha = data.archive_file.az_func_audio_package.output_sha
   }
   provisioner "local-exec" {
     interpreter = ["powershell", "-ExecutionPolicy", "Bypass", "-Command"]
