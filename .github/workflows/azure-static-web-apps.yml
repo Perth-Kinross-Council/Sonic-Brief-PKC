@@ -10,17 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # 1. Checkout code
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+            submodules: true
 
       # 2. Setup Node.js
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
       # 3. Clear npm cache
-      - name: Clear npm cache
-        run: npm cache clean --force
+      #- name: Clear npm cache
+      #  run: npm cache clean --force
 
       # 4. Install dependencies
       - name: Install dependencies
@@ -28,18 +31,18 @@ jobs:
         run: npm install --legacy-peer-deps
 
       # 5. Debug environment variables (verify secrets)
-      - name: Debug env
-        run: |
-          echo "VITE_BASE_URL=$VITE_BASE_URL"
-          echo "VITE_API_URL=$VITE_API_URL"
-        env:
-          VITE_BASE_URL: ${{ secrets.VITE_BASE_URL }}
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+      #- name: Debug env
+      #  run: |
+       #   echo "VITE_BASE_URL=$VITE_BASE_URL"
+      #    echo "VITE_API_URL=$VITE_API_URL"
+       # env:
+       #   VITE_BASE_URL: ${{ secrets.VITE_BASE_URL }}
+        #  VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       # 6. Clean previous build folder
-      - name: Clean build folder
-        working-directory: frontend_app
-        run: rm -rf dist
+      #- name: Clean build folder
+      #  working-directory: frontend_app
+      #  run: rm -rf dist
 
       # 7. Build Vite app with injected secrets
       - name: Build Vite app
@@ -72,3 +75,4 @@ jobs:
           action: "upload"
           app_location: "frontend_app"
           output_location: "dist"
+          skip_app_build: true
