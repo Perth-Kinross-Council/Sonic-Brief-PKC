@@ -9,29 +9,39 @@ jobs:
   build_and_deploy_job:
     runs-on: ubuntu-latest
     steps:
+      # 1. Checkout code
       - uses: actions/checkout@v3
 
+      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          
+
+      # 3. Clear npm cache
       - name: Clear npm cache
         run: npm cache clean --force
 
-
+      # 4. Install dependencies
       - name: Install dependencies
         working-directory: frontend_app
         run: npm install --legacy-peer-deps
 
+      # 5. Debug environment variables (verify secrets)
       - name: Debug env
         run: |
-              echo "VITE_BASE_URL=$VITE_BASE_URL"
-              echo "VITE_API_URL=$VITE_API_URL"
+          echo "VITE_BASE_URL=$VITE_BASE_URL"
+          echo "VITE_API_URL=$VITE_API_URL"
         env:
-              VITE_BASE_URL: ${{ secrets.VITE_BASE_URL }}
-              VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_BASE_URL: ${{ secrets.VITE_BASE_URL }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
+      # 6. Clean previous build folder
+      - name: Clean build folder
+        working-directory: frontend_app
+        run: rm -rf dist
+
+      # 7. Build Vite app with injected secrets
       - name: Build Vite app
         working-directory: frontend_app
         run: npm run build
@@ -46,6 +56,14 @@ jobs:
           VITE_APP_TITLE: Perth and Kinross Council
           VITE_APP_SUBTITLE: Sonic Brief Demo
 
+      # 8. Inspect built files for API URL (verification step)
+      - name: Inspect built files for API URL
+        working-directory: frontend_app
+        run: |
+          echo "Searching for API URL in dist..."
+          grep -r "http" dist || echo "No API URL found"
+
+      # 9. Deploy to Azure Static Web Apps
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
