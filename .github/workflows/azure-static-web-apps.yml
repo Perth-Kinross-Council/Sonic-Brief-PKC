@@ -15,10 +15,22 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+          
+      - name: Clear npm cache
+        run: npm cache clean --force
+
 
       - name: Install dependencies
         working-directory: frontend_app
         run: npm install --legacy-peer-deps
+
+      - name: Debug env
+        run: |
+              echo "VITE_BASE_URL=$VITE_BASE_URL"
+              echo "VITE_API_URL=$VITE_API_URL"
+        env:
+              VITE_BASE_URL: ${{ secrets.VITE_BASE_URL }}
+              VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       - name: Build Vite app
         working-directory: frontend_app
