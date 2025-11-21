@@ -24,7 +24,7 @@ jobs:
         working-directory: frontend_app
         run: npm run build
         env:
-          VITE_BASE_URL: /
+          VITE_BASE_URL: ${{ secrets.VITE_BASE_URL }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_AUTH_METHOD: entra
           VITE_AZURE_CLIENT_ID: ${{ secrets.VITE_AZURE_CLIENT_ID }}
