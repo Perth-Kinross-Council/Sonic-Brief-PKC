@@ -10,7 +10,7 @@ export const env = {
   VITE_DEBUG: import.meta.env.VITE_DEBUG === "true" || import.meta.env.DEV === true,
 
   // API URL: must be injected via .env or GitHub Actions for production 
-  VITE_API_URL: import.meta.env.VITE_API_URL ?? "",
+  VITE_API_URL: import.meta.env.VITE_API_URL ?? "https://sbrs-vsps-dev-echo-brief-backend-api-1va995.azurewebsites.net",
 
   // App branding
   VITE_APP_TITLE: import.meta.env.VITE_APP_TITLE ?? "Perth and Kinross Council",
