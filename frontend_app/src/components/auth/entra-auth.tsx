@@ -21,7 +21,7 @@ export const EntraAuth: React.FC = () => {
 
   const handleLogin = () => {
     if (inProgress === "none") {
-      instance.loginPopup(loginRequest);
+      instance.loginRedirect(loginRequest);
     }
   };
 
