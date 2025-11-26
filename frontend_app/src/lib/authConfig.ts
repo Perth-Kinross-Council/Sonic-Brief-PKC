@@ -45,6 +45,6 @@ export const msalConfig: Configuration = {
 };
 
 export const loginRequest = {
-  scopes: [import.meta.env.VITE_AZURE_BACKEND_SCOPE, 'User.Read'],
+  scopes: ['User.Read'],
   prompt: 'select_account', // Allow user to select account if multiple available
 };
