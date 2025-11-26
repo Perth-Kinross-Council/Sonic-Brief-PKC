@@ -1,3 +1,4 @@
+
 name: Azure Static Web Apps CI/CD
 
 on:
@@ -12,37 +13,18 @@ jobs:
       # 1. Checkout code
       - uses: actions/checkout@v4
         with:
-            submodules: true
+          submodules: true
 
       # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          #cache: 'npm'
-
-      # 3. Clear npm cache 
-      #- name: Clear npm cache
-      #  run: npm cache clean --force
 
       # 4. Install dependencies
       - name: Install dependencies
         working-directory: frontend_app
         run: npm install --legacy-peer-deps
-
-      # 5. Debug environment variables (verify secrets)
-      #- name: Debug env
-      #  run: |
-       #   echo "VITE_BASE_URL=$VITE_BASE_URL"
-      #    echo "VITE_API_URL=$VITE_API_URL"
-       # env:
-       #   VITE_BASE_URL: ${{ secrets.VITE_BASE_URL }}
-        #  VITE_API_URL: ${{ secrets.VITE_API_URL }}
-
-      # 6. Clean previous build  folder
-      #- name: Clean build folder
-      #  working-directory: frontend_app
-      #  run: rm -rf dist
 
       # 7. Build Vite app with injected secrets
       - name: Build Vite app
@@ -59,13 +41,16 @@ jobs:
           VITE_APP_TITLE: Perth and Kinross Council
           VITE_APP_SUBTITLE: Sonic Brief Demo
 
-          
       # 8. Inject OPENID_ISSUER into staticwebapp.config.json
       - name: Replace placeholder in config
         working-directory: frontend_app
         run: |
           sed -i "s|\${OPENID_ISSUER}|${{ secrets.OPENID_ISSUER }}|g" staticwebapp.config.json
 
+      # ✅ NEW STEP: Copy config into dist
+      - name: Copy Static Web App config into dist
+        working-directory: frontend_app
+        run: cp staticwebapp.config.json dist/
 
       # 9. Inspect built files for API URL (verification step)
       - name: Inspect built files for API URL
@@ -83,4 +68,3 @@ jobs:
           action: "upload"
           app_location: "frontend_app"
           output_location: "dist"
-          #skip_app_build: true
