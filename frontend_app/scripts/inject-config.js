@@ -2,9 +2,9 @@
 import fs from 'fs';
 import path from 'path';
 
-const tenantId = process.env['VITE_AZURE-TENANT_ID'];
+const tenantId = process.env['VITE_AZURE_TENANT_ID'];
 if (!tenantId) {
-  console.error('❌ VITE_AZURE-TENANT_ID is missing. Check your environment variables.');
+  console.error('❌ VITE_AZURE_TENANT_ID is missing. Check your environment variables.');
   process.exit(1);
 }
 
