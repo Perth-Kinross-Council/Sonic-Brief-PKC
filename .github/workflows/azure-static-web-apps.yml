@@ -25,6 +25,15 @@ jobs:
       - name: Install dependencies
         working-directory: frontend_app
         run: npm install --legacy-peer-deps
+        
+      - name: Debug environment variables
+        run: |
+          echo "Client ID: $VITE_AZURE_CLIENT_ID"
+          echo "Tenant ID: $VITE_AZURE_TENANT_ID"
+        env:
+          VITE_AZURE_CLIENT_ID: ${{ secrets.VITE_AZURE_CLIENT_ID }}
+          VITE_AZURE_TENANT_ID: ${{ secrets.VITE_AZURE_TENANT_ID }}
+
 
       # 7. Build Vite app with injected secrets
       - name: Build Vite app
