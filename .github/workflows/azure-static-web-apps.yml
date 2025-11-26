@@ -39,7 +39,7 @@ jobs:
        #   VITE_BASE_URL: ${{ secrets.VITE_BASE_URL }}
         #  VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
-      # 6. Clean previous build folder
+      # 6. Clean previous build  folder
       #- name: Clean build folder
       #  working-directory: frontend_app
       #  run: rm -rf dist
