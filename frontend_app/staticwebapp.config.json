@@ -27,9 +27,7 @@
     "rewrite": "/index.html",
     "exclude": [
       "/static/*",
-      "/images/*",
-      "/*.css",
-      "/*.js"
+      "/images/*"
     ]
   }
 }

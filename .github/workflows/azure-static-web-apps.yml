@@ -59,14 +59,22 @@ jobs:
           VITE_APP_TITLE: Perth and Kinross Council
           VITE_APP_SUBTITLE: Sonic Brief Demo
 
-      # 8. Inspect built files for API URL (verification step)
+          
+      # 8. Inject OPENID_ISSUER into staticwebapp.config.json
+      - name: Replace placeholder in config
+        working-directory: frontend_app
+        run: |
+          sed -i "s|\${OPENID_ISSUER}|${{ secrets.OPENID_ISSUER }}|g" staticwebapp.config.json
+
+
+      # 9. Inspect built files for API URL (verification step)
       - name: Inspect built files for API URL
         working-directory: frontend_app
         run: |
           echo "Searching for API URL in dist..."
           grep -r "http" dist || echo "No API URL found"
 
-      # 9. Deploy to Azure Static Web Apps
+      # 10. Deploy to Azure Static Web Apps
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
