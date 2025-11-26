@@ -11,15 +11,11 @@
       }
     }
   },
-   "routes": [
+  "routes": [
     {
       "route": "/login",
       "allowedRoles": ["anonymous"],
       "rewrite": "/index.html"
-    },
-    {
-      "route": "/*",
-      "allowedRoles": ["authenticated"]
     }
   ],
   "navigationFallback": {
