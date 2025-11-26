@@ -4,8 +4,7 @@
       "azureActiveDirectory": {
         "enabled": true,
         "registration": {
-          "openIdIssuer": "${OPENID_ISSUER}",
-          "clientIdSettingName": "FRONTEND_CLIENT_ID",
+          "openIdIssuer": "https://login.microsoftonline.com/__TENANT_ID__/v2.0",
           "clientSecretSettingName": "IGNORED"
         }
       }

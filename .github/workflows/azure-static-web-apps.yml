@@ -42,10 +42,10 @@ jobs:
           VITE_APP_SUBTITLE: Sonic Brief Demo
 
       # 8. Inject OPENID_ISSUER into staticwebapp.config.json
-      - name: Replace placeholder in config
-        working-directory: frontend_app
-        run: |
-          sed -i "s|\${OPENID_ISSUER}|${{ secrets.OPENID_ISSUER }}|g" staticwebapp.config.json
+      #- name: Replace placeholder in config
+       # working-directory: frontend_app
+       # run: |
+       #   sed -i "s|\${OPENID_ISSUER}|${{ secrets.OPENID_ISSUER }}|g" staticwebapp.config.json
 
       # ✅ NEW STEP: Copy config into dist
       - name: Copy Static Web App config into dist

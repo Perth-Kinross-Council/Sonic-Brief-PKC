@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite --port 3000",
     "build": "vite build",
+    "inject-config": "node ./scripts/inject-config.js",
     "serve": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
